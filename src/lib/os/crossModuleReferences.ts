@@ -42,13 +42,13 @@ export const crossModuleReferencesRegistry: CrossModuleReference[] = [
   {
     id: 'CMR-001',
     sourceModule: 'SIGNAL',
-    sourceRecordId: 'OBS-001',
+    sourceRecordId: 'obs_89412a',
     targetModule: 'AI',
     targetRecordId: 'DEC-001',
     type: 'led_to',
-    label: 'Telemetry latency observation led to rate limit threshold decision',
+    label: 'Payment failure observation led to billing recovery decision',
     createdAt: '2026-08-30T10:00:00Z',
-    metadata: { observationDomain: 'telemetry' },
+    metadata: { observationDomain: 'billing' },
   },
   {
     id: 'CMR-002',
@@ -57,9 +57,9 @@ export const crossModuleReferencesRegistry: CrossModuleReference[] = [
     targetModule: 'FORGE',
     targetRecordId: 'TASK-001',
     type: 'led_to',
-    label: 'Rate limit threshold decision led to rate limit adjustment task',
+    label: 'Billing recovery decision led to payment failure review task',
     createdAt: '2026-08-30T10:05:00Z',
-    metadata: { decisionType: 'threshold' },
+    metadata: { decisionType: 'billing_recovery' },
   },
   {
     id: 'CMR-003',
@@ -75,13 +75,13 @@ export const crossModuleReferencesRegistry: CrossModuleReference[] = [
   {
     id: 'CMR-004',
     sourceModule: 'SIGNAL',
-    sourceRecordId: 'INS-001',
+    sourceRecordId: 'ins_7721',
     targetModule: 'PULSE',
     targetRecordId: 'REQ-001',
     type: 'context_for',
-    label: 'Performance insight provides anomaly context for pulse request',
+    label: 'Billing failure insight provides context for pulse request',
     createdAt: '2026-08-30T10:15:00Z',
-    metadata: { insightType: 'anomaly' },
+    metadata: { insightType: 'billing_failure' },
   },
   {
     id: 'CMR-005',
@@ -90,9 +90,9 @@ export const crossModuleReferencesRegistry: CrossModuleReference[] = [
     targetModule: 'PULSE',
     targetRecordId: 'REQ-001',
     type: 'supports',
-    label: 'Execution task supports pulse request status resolution',
+    label: 'Billing execution task supports pulse request resolution',
     createdAt: '2026-08-30T10:20:00Z',
-    metadata: { executionState: 'in_progress' },
+    metadata: { executionState: 'received' },
   },
 ];
 

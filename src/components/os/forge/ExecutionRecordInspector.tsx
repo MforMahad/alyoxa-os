@@ -77,8 +77,9 @@ export const ExecutionRecordInspector: React.FC<ExecutionRecordInspectorProps> =
             {JSON.stringify(record.result, null, 2)}
           </pre>
         ) : (
-          <div className="p-3 bg-[var(--background)] border border-[var(--border)] text-[10px] text-[var(--muted)] text-center">
-            NO EXECUTION RESULT RECORDED
+          <div className="p-3 bg-[var(--background)] border border-[var(--border)] text-[10px] text-[var(--muted)] text-center space-y-1">
+            <div>No execution result yet.</div>
+            <div className="opacity-75">A result will appear here when an execution outcome is available.</div>
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { aiDecisionsRegistry } from "@/components/os/ai/aiDecisions";
+import { aiDecisionsRegistry } from "@/data/os/ai/aiDecisions";
 
 
 export type ExecutionTaskStatus =
@@ -56,14 +56,14 @@ if (!dec001 || !dec002) {
 
 export const forgeNodesRegistry: ExecutionNode[] = [
   {
-    id: 'NODE-BILLING',
+    id: 'forge.billing',
     name: 'Billing Execution Node',
     type: 'billing',
     status: 'online',
     capabilities: ['review_payment_failures'],
   },
   {
-    id: 'NODE-INFRASTRUCTURE',
+    id: 'forge.infrastructure',
     name: 'Infrastructure Execution Node',
     type: 'infrastructure',
     status: 'online',
@@ -76,7 +76,7 @@ export const forgeTasksRegistry: ExecutionTask[] = [
     id: 'TASK-001',
     runId: 'RUN-001',
     decisionId: 'DEC-001',
-    nodeId: 'NODE-BILLING',
+    nodeId: 'forge.billing',
     actionName: dec001.recommendedAction.actionName,
     payload: dec001.recommendedAction.payload,
     status: 'received',
@@ -86,7 +86,7 @@ export const forgeTasksRegistry: ExecutionTask[] = [
     id: 'TASK-002',
     runId: 'RUN-002',
     decisionId: 'DEC-002',
-    nodeId: 'NODE-INFRASTRUCTURE',
+    nodeId: 'forge.infrastructure',
     actionName: dec002.recommendedAction.actionName,
     payload: dec002.recommendedAction.payload,
     status: 'queued',
@@ -99,7 +99,7 @@ export const forgeRecordsRegistry: ExecutionRecord[] = [
     id: 'REC-001',
     taskId: 'TASK-001',
     runId: 'RUN-001',
-    nodeId: 'NODE-BILLING',
+    nodeId: 'forge.billing',
     status: 'received',
     receivedAt: '2026-08-30T10:50:00Z',
     summary: 'Task received from AI Core and held at authorization boundary.',
@@ -108,7 +108,7 @@ export const forgeRecordsRegistry: ExecutionRecord[] = [
     id: 'REC-002',
     taskId: 'TASK-002',
     runId: 'RUN-002',
-    nodeId: 'NODE-INFRASTRUCTURE',
+    nodeId: 'forge.infrastructure',
     status: 'queued',
     receivedAt: '2026-08-30T11:05:00Z',
     summary: 'Task queued for infrastructure execution node. Executor attachment pending.',

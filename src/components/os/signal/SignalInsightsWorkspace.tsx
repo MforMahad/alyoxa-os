@@ -50,8 +50,9 @@ export const SignalInsightsWorkspace: React.FC<SignalInsightsWorkspaceProps> = (
               />
             ))
           ) : (
-            <div className="p-8 text-center font-mono text-xs text-[var(--muted)]">
-              NO AI INSIGHTS IDENTIFIED
+            <div className="p-8 text-center font-mono text-xs text-[var(--muted)] space-y-1">
+              <div>No insights yet.</div>
+              <div className="text-[10px] opacity-75">AI-generated interpretations will appear here when observations are processed.</div>
             </div>
           )}
         </div>

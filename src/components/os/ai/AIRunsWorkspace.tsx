@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AIRun } from '@/data/os/aiRuns';
+import { AIRun } from '@/data/os/ai/aiRuns';
 
-import { AIContextItem } from '@/data/os/aiCore';
+import { AIContextItem } from '@/data/os/ai/aiCore';
 import { RunRow } from './RunRow';
 import { RunInspector } from './RunInspector';
-import { AIDecision } from './aiDecisions';
+import { AIDecision } from '../../../data/os/ai/aiDecisions';
 
 interface AIRunsWorkspaceProps {
   runs: AIRun[];
@@ -52,8 +52,9 @@ export const AIRunsWorkspace: React.FC<AIRunsWorkspaceProps> = ({
               />
             ))
           ) : (
-            <div className="p-8 text-center font-mono text-xs text-[var(--muted)]">
-              NO AI ORCHESTRATION RUNS RECORDED
+            <div className="p-8 text-center font-mono text-xs text-[var(--muted)] space-y-1">
+              <div>No runs yet.</div>
+              <div className="text-[10px] opacity-75">Execution records will appear here when AI decisions enter the execution flow.</div>
             </div>
           )}
         </div>

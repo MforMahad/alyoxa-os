@@ -20,8 +20,9 @@ export const PulseThreadsWorkspace: React.FC<PulseThreadsWorkspaceProps> = ({
 
   if (threads.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center p-12 font-mono text-xs text-[var(--muted)]">
-        NO PULSE THREADS FOUND IN REGISTRY
+      <div className="flex flex-1 items-center justify-center p-12 font-mono text-xs text-[var(--muted)] flex-col space-y-1 text-center">
+        <div>No threads yet.</div>
+        <div className="text-[10px] opacity-75">Conversation threads will appear here when they enter the Pulse workflow.</div>
       </div>
     );
   }

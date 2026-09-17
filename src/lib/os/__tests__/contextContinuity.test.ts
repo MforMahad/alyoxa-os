@@ -27,15 +27,17 @@ import {
       expect(result.status).toBe('valid');
       expect(result.errors).toHaveLength(0);
       expect(result.sourceIdentity.module).toBe('SIGNAL');
-      expect(result.sourceIdentity.recordId).toBe('OBS-001');
+      expect(result.sourceIdentity.recordId).toBe('obs_89412a');
       expect(result.sourceIdentity.recordType).toBe('observation');
       expect(result.contractId).toBe('CONTRACT-001');
       expect(result.targetIdentity.module).toBe('AI');
-      expect(result.targetIdentity.recordType).toBe('Decision');
+      expect(result.targetIdentity.recordType).toBe('decision');
     });
   
     it('2. Event resolution → context handoff preserves identity', () => {
       const result = verifyContextContinuity();
+
+     
   
       expect(
         result.stages.find(
@@ -80,6 +82,8 @@ import {
         ),
       ).toBe(true);
     });
+
+  
   
     it('6. Target module mutation is detected', () => {
       const mutated = canonicalResult();
@@ -93,7 +97,7 @@ import {
       expect(result.status).toBe('invalid');
       expect(
         result.errors.some((error) =>
-          error.toLowerCase().includes('target module'),
+          error.toLowerCase().includes('targetmodule'),
         ),
       ).toBe(true);
     });

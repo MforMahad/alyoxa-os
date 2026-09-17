@@ -12,7 +12,7 @@ export function run13_7_1_ScenarioDefinitionTests(): boolean {
   }
 
   // 2. Validate Canonical Records
-  if (scenario.records.signal.recordId !== 'OBS-001' || scenario.records.signal.module !== 'SIGNAL') {
+  if (scenario.records.signal.recordId !== 'obs_89412a' || scenario.records.signal.module !== 'SIGNAL') {
     throw new Error('Test Failed: Signal record mismatch.');
   }
   if (scenario.records.ai.recordId !== 'DEC-001' || scenario.records.ai.module !== 'AI') {
@@ -33,7 +33,7 @@ export function run13_7_1_ScenarioDefinitionTests(): boolean {
     !ref1 ||
     ref1.fromModule !== 'SIGNAL' ||
     ref1.toModule !== 'AI' ||
-    ref1.sourceRecordId !== 'OBS-001' ||
+    ref1.sourceRecordId !== 'obs_89412a' ||
     ref1.targetRecordId !== 'DEC-001'
   ) {
     throw new Error('Test Failed: REF-001 canonical mapping mismatch.');

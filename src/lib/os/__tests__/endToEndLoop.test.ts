@@ -64,14 +64,14 @@ describe(
 
       expect(eventResolution?.status).toBe('matched');
 
-      expect(eventResolution?.source.recordId).toBe('OBS-001');
+      expect(eventResolution?.source.recordId).toBe('obs_89412a');
       expect(eventResolution?.handoffs[0]?.contractId).toBe(
         'CONTRACT-001',
       );
       expect(eventResolution?.handoffs[0]?.targetModule).toBe('AI');
 
       expect(contextHandoff?.status).toBe('prepared');
-      expect(contextHandoff?.package?.source.recordId).toBe('OBS-001');
+      expect(contextHandoff?.package?.source.recordId).toBe('obs_89412a');
       expect(contextHandoff?.package?.contractId).toBe('CONTRACT-001');
       expect(contextHandoff?.package?.targetModule).toBe('AI');
 

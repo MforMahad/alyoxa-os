@@ -73,11 +73,12 @@ describe("Runtime Safety Tests", () => {
       if (
         safeRes1.status !== "valid" ||
         safeRes1.targetModule !== "AI" ||
-        safeRes1.sourceRecordId !== "OBS-001" ||
+        safeRes1.sourceRecordId !== "obs_89412a" ||
         safeRes1.contractId !== "CONTRACT-001"
       ) {
         console.error(
           "FAIL: EVT-001 runtime safety validation failed.",
+          safeRes1,
         );
         passed = false;
       }
@@ -98,10 +99,11 @@ describe("Runtime Safety Tests", () => {
       if (
         safeRes2.status !== "valid" ||
         safeRes2.targetModule !== "PULSE" ||
-        safeRes2.sourceRecordId !== "INS-001"
+        safeRes2.sourceRecordId !== "ins_7721"
       ) {
         console.error(
           "FAIL: EVT-002 runtime safety validation failed.",
+          safeRes2,
         );
         passed = false;
       }
@@ -265,9 +267,9 @@ describe("Runtime Safety Tests", () => {
       sourceModule: "VAULT",
       targetModule: "AI",
       sourceRecordType: "observation",
-      targetRecordType: "Decision",
+      targetRecordType: "decision",
       purpose: "Test mismatch source",
-      requiredReferences: ["OBS-001"],
+      requiredReferences: ["obs_89412a"],
       metadata: {},
     };
 
@@ -295,9 +297,9 @@ describe("Runtime Safety Tests", () => {
       sourceModule: "SIGNAL",
       targetModule: "PULSE",
       sourceRecordType: "observation",
-      targetRecordType: "Decision",
+      targetRecordType: "decision",
       purpose: "Test mismatch target",
-      requiredReferences: ["OBS-001"],
+      requiredReferences: ["obs_89412a"],
       metadata: {},
     };
 
@@ -325,9 +327,9 @@ describe("Runtime Safety Tests", () => {
       sourceModule: "SIGNAL",
       targetModule: "AI",
       sourceRecordType: "observation",
-      targetRecordType: "Notification",
+      targetRecordType: "notification",
       purpose: "Test mismatch record type",
-      requiredReferences: ["OBS-001"],
+      requiredReferences: ["obs_89412a"],
       metadata: {},
     };
 
@@ -404,7 +406,7 @@ describe("Runtime Safety Tests", () => {
     const vaultRef: CrossModuleReference = {
       id: "REF-VAULT-001",
       sourceModule: "SIGNAL",
-      sourceRecordId: "OBS-001",
+      sourceRecordId: "obs_89412a",
       targetModule: "VAULT",
       targetRecordId: "VLT-001",
       type: "derived_from",
@@ -419,7 +421,7 @@ describe("Runtime Safety Tests", () => {
       sourceRecordType: "observation",
       targetRecordType: "VaultRecord",
       purpose: "Vault integration mock",
-      requiredReferences: ["OBS-001"],
+      requiredReferences: ["obs_89412a"],
       metadata: {},
     };
 
@@ -455,6 +457,7 @@ describe("Runtime Safety Tests", () => {
     if (notSupportedHandoffRes.status !== "not_supported") {
       console.error(
         "FAIL: Setup error - handoff result status is not not_supported.",
+        notSupportedHandoffRes,
       );
       passed = false;
     }
@@ -476,6 +479,7 @@ describe("Runtime Safety Tests", () => {
     ) {
       console.error(
         "FAIL: Structurally valid not_supported handoff was incorrectly rejected by safety validator.",
+        resNotSupportedSafety,
       );
       passed = false;
     }

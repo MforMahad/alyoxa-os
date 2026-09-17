@@ -1,5 +1,5 @@
 import React from 'react';
-import { AIDecision, DecisionAttentionState, DecisionStatus } from './aiDecisions';
+import { AIDecision, DecisionAttentionState, DecisionStatus } from '../../../data/os/ai/aiDecisions';
 
 
 interface DecisionRowProps {

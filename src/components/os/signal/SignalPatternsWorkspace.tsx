@@ -53,8 +53,9 @@ export const SignalPatternsWorkspace: React.FC<SignalPatternsWorkspaceProps> = (
               />
             ))
           ) : (
-            <div className="p-8 text-center font-mono text-xs text-[var(--muted)]">
-              NO CORRELATED PATTERNS IDENTIFIED
+            <div className="p-8 text-center font-mono text-xs text-[var(--muted)] space-y-1">
+              <div>No patterns identified yet.</div>
+              <div className="text-[10px] opacity-75">Patterns will appear when Signal detects meaningful relationships across observations.</div>
             </div>
           )}
         </div>

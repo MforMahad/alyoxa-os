@@ -4,6 +4,10 @@
 // Note: AI Core (Understand) evaluates Signal data to produce Insights.
 // ============================================================================
 
+// ============================================================================
+// A. DOMAIN CONTRACTS / TYPES
+// ============================================================================
+
 export type FeedSourceType = 'webhook' | 'telemetry' | 'api_poll' | 'system_log';
 export type FeedSourceStatus = 'active' | 'degraded' | 'offline';
 export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
@@ -79,7 +83,7 @@ export interface Insight {
   confidenceScore: number; // e.g., 0.98 (98% confidence)
   summary: string;         // AI reasoning output
   recommendedAction: {
-    forgeTargetNode: string; // e.g., "EX.02 // FORGE_BILLING_RECOVERY"
+    forgeTargetNode: string; // e.g., "forge.billing"
     actionName: string;      // e.g., "dispatch_recovery_sequence"
     payload: Record<string, unknown>;
   };
@@ -88,7 +92,7 @@ export interface Insight {
 }
 
 // ============================================================================
-// MOCK DATA STORE
+// B. DEVELOPMENT FIXTURE DATA (Simulated Store)
 // ============================================================================
 
 export const signalFeedSources: FeedSource[] = [
@@ -224,7 +228,7 @@ export const signalPatterns: Pattern[] = [
     title: 'Repeated Payment Failures on Customer Account',
     severity: 'medium',
     sourceIds: ['src_stripe'],
-    observationIds: ['obs_89412a'], // Sampled observation representative of this pattern
+    observationIds: ['obs_89412a'],
     firstObserved: '2026-09-08T12:00:00Z',
     lastObserved: '2026-09-08T13:42:01Z',
     count: 3,
@@ -235,7 +239,7 @@ export const signalPatterns: Pattern[] = [
     title: 'Transient US-East Endpoint Degradation',
     severity: 'high',
     sourceIds: ['src_sys'],
-    observationIds: ['obs_89412b'], // Sampled observation representative of this pattern
+    observationIds: ['obs_89412b'],
     firstObserved: '2026-09-08T13:40:00Z',
     lastObserved: '2026-09-08T13:41:58Z',
     count: 14,
@@ -251,7 +255,7 @@ export const signalInsights: Insight[] = [
     confidenceScore: 0.98,
     summary: 'Customer cus_9821 hit 3 consecutive billing failures in 24 hours. High risk of churn if service suspends.',
     recommendedAction: {
-      forgeTargetNode: 'EX.02 // FORGE_BILLING_RECOVERY',
+      forgeTargetNode: 'forge.billing',
       actionName: 'dispatch_recovery_sequence',
       payload: {
         customer_id: 'cus_9821',
@@ -269,7 +273,7 @@ export const signalInsights: Insight[] = [
     confidenceScore: 0.94,
     summary: 'US-East edge node latency spike resolved by routing traffic to backup EU-Central gateway.',
     recommendedAction: {
-      forgeTargetNode: 'EX.01 // FORGE_TRAFFIC_ROUTER',
+      forgeTargetNode: 'forge.infrastructure',
       actionName: 'reroute_edge_traffic',
       payload: {
         origin: 'us-east-01',

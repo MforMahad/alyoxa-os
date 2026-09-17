@@ -10,7 +10,7 @@ import ThesisSection from "./thesis/ThesisSection";
 
 export default function LandingPage() {
   return (
-    <main className=" bg-[var(--background)] text-[var(--foreground)] flex flex-col">
+    <main className="bg-[var(--background)] text-[var(--foreground)] flex flex-col">
       <EditorialNav />
       <HeroSection />
       <ThesisSection />

@@ -30,7 +30,7 @@ export const VaultSubNav: React.FC<VaultSubNavProps> = ({ activeTab, counts }) =
         return (
           <Link
             key={tab.id}
-            href={`/vault?tab=${tab.id}`}
+            href={`/app/vault?tab=${tab.id}`}
             className={`h-full flex items-center border-b-2 transition-colors font-medium text-[11px] ${
               isActive
                 ? 'border-[var(--primary)] text-[var(--foreground)] font-bold'

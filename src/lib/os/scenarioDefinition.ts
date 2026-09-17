@@ -34,7 +34,7 @@ export class OSScenarioManager {
       description: 'Deterministic end-to-end ALYOXA OS loop definition (SIGNAL → AI → FORGE → PULSE)',
       pipeline: ['SIGNAL', 'AI', 'FORGE', 'PULSE'] as const,
       records: {
-        signal: { id: 'OBS-001', module: 'SIGNAL', recordId: 'OBS-001' },
+        signal: { id: 'OBS-001', module: 'SIGNAL', recordId: 'obs_89412a' },
         ai: { id: 'DEC-001', module: 'AI', recordId: 'DEC-001' },
         forge: { id: 'TASK-001', module: 'FORGE', recordId: 'TASK-001' },
         pulse: { id: 'REQ-001', module: 'PULSE', recordId: 'REQ-001' },
@@ -44,7 +44,7 @@ export class OSScenarioManager {
           id: 'REF-001',
           fromModule: 'SIGNAL',
           toModule: 'AI',
-          sourceRecordId: 'OBS-001',
+          sourceRecordId: 'obs_89412a',
           targetRecordId: 'DEC-001',
         },
         {

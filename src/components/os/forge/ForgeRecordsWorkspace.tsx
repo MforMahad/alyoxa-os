@@ -42,8 +42,9 @@ export const ForgeRecordsWorkspace: React.FC<ForgeRecordsWorkspaceProps> = ({
               />
             ))
           ) : (
-            <div className="p-8 text-center font-mono text-xs text-[var(--muted)]">
-              NO EXECUTION RECORDS FOUND
+            <div className="p-8 text-center font-mono text-xs text-[var(--muted)] space-y-1">
+              <div>No execution records yet.</div>
+              <div className="text-[10px] opacity-75">Execution lifecycle records will appear here when available.</div>
             </div>
           )}
         </div>

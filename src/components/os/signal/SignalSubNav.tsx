@@ -23,7 +23,7 @@ export const SignalSubNav: React.FC<SignalSubNavProps> = ({ activeTab }) => {
           return (
             <Link
               key={tab.id}
-              href={`/signal?tab=${tab.id}`}
+              href={`/app/signal?tab=${tab.id}`}
               className={`py-3 border-b-2 flex items-center gap-2 transition-colors ${
                 isActive
                   ? 'border-[var(--signal)] text-[var(--foreground)] font-bold'

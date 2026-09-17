@@ -33,7 +33,7 @@ export const aiDecisionsRegistry: AIDecision[] = [
       forgeTargetNode: 'forge.billing',
       actionName: 'review_payment_failures',
       payload: {
-        patternId: 'PAT-001',
+        patternId: 'pat_0012',
         failureCount: 14,
         suggestedStrategy: 'dunning_retry_with_grace_period',
       },

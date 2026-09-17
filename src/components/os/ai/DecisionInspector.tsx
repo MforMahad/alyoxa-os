@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { AIContextItem } from '@/data/os/aiCore';
-import { AIDecision, DecisionAttentionState, DecisionStatus } from './aiDecisions';
+import { AIContextItem } from '@/data/os/ai/aiCore';
+import { AIDecision, DecisionAttentionState, DecisionStatus } from '../../../data/os/ai/aiDecisions';
 
 interface DecisionInspectorProps {
   decision: AIDecision;
@@ -179,7 +179,7 @@ export const DecisionInspector: React.FC<DecisionInspectorProps> = ({
 
         {decision.status === 'rejected' && (
           <div className="p-2.5 border border-[var(--border)] bg-[var(--surface)] text-[10px] text-[var(--muted)] text-center font-bold tracking-wider uppercase">
-            DECISION REJECTED // DISCARDED BY SYSTEM OR HUMAN OPERATOR
+            DECISION REJECTED // HANDOFF NOT AUTHORIZED
           </div>
         )}
       </div>

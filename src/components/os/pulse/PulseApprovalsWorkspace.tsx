@@ -6,7 +6,7 @@ import { PulseApproval, PulseRequest } from '@/data/os/pulse';
 import { ExecutionTask } from '@/data/os/forge';
 import { PulseApprovalRow } from './PulseApprovalRow';
 import { PulseApprovalInspector } from './PulseApprovalInspector';
-import { AIDecision } from '../ai/aiDecisions';
+import { AIDecision } from '@/data/os/ai/aiDecisions';
 
 interface PulseApprovalsWorkspaceProps {
   approvals: PulseApproval[];
@@ -27,8 +27,9 @@ export const PulseApprovalsWorkspace: React.FC<PulseApprovalsWorkspaceProps> = (
 
   if (approvals.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center p-12 font-mono text-xs text-[var(--muted)]">
-        NO PULSE APPROVALS FOUND IN REGISTRY
+      <div className="flex flex-1 items-center justify-center p-12 font-mono text-xs text-[var(--muted)] flex-col space-y-1 text-center">
+        <div>No approvals yet.</div>
+        <div className="text-[10px] opacity-75">Approval records will appear here when they enter the Pulse workflow.</div>
       </div>
     );
   }

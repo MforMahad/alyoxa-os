@@ -20,11 +20,11 @@ export function runSharedContextVerification(): boolean {
   const testStore = new SharedContextStore();
 
   // Test 1: Project from real locked OSEvent fixture (EVT-001)
-  const sampleEvent = osEventsRegistry[0]; // OBS-001
+  const sampleEvent = osEventsRegistry[0]; // obs_89412a
   const projectedEntry = testStore.projectFromEvent(sampleEvent);
 
   if (  
-    projectedEntry.source.recordId !== 'OBS-001' ||
+    projectedEntry.source.recordId !== 'obs_89412a' ||
     projectedEntry.source.module !== 'SIGNAL'
   ) {
     console.error('FAIL: Projection source reference mismatch.');
@@ -32,12 +32,12 @@ export function runSharedContextVerification(): boolean {
   }
 
   // Test 2: Reference Extraction from Locked OSEvent Fixture (EVT-002)
-  const insightEvent = osEventsRegistry[1]; // INS-001 referencing OBS-001
+  const insightEvent = osEventsRegistry[1]; // ins_7721 referencing obs_89412a
   const projectedInsight = testStore.projectFromEvent(insightEvent);
 
   if (
     projectedInsight.references.length !== 1 ||
-    projectedInsight.references[0].recordId !== 'OBS-001' ||
+    projectedInsight.references[0].recordId !== 'obs_89412a' ||
     projectedInsight.references[0].module !== 'SIGNAL'
   ) {
     console.error('FAIL: Metadata cross-reference extraction failed.');
@@ -51,8 +51,8 @@ export function runSharedContextVerification(): boolean {
     passed = false;
   }
 
-  // Test 4: Query by Reference (OBS-001 is direct source in EVT-001 & reference in EVT-002)
-  const obsReferences = testStore.getByReference('OBS-001');
+  // Test 4: Query by Reference (obs_89412a is direct source in EVT-001 & reference in EVT-002)
+  const obsReferences = testStore.getByReference('obs_89412a');
   if (obsReferences.length !== 2) {
     console.error('FAIL: Query by reference ID failed to aggregate matching records.');
     passed = false;
@@ -69,7 +69,7 @@ export function runSharedContextVerification(): boolean {
     actor: 'AI-CORE', // Valid established actor
     summary: 'Test decision projection',
     metadata: {
-      sourceObservationId: 'OBS-001',
+      sourceObservationId: 'obs_89412a',
     },
   };
 
@@ -106,7 +106,7 @@ describe('Shared Context', () => {
     expect(runSharedContextVerification()).toBe(true);
   });
 
-  it('projects canonical EVT-001 into SIGNAL / OBS-001 observation context', () => {
+  it('projects canonical EVT-001 into SIGNAL / obs_89412a observation context', () => {
     const store = new SharedContextStore();
     const evt001 = eventById('EVT-001');
     const projected = store.projectFromEvent(evt001);
@@ -114,7 +114,7 @@ describe('Shared Context', () => {
     expect(projectedEntryIdentity(projected)).toEqual({
       id: 'CTX-EVT-001',
       module: 'SIGNAL',
-      recordId: 'OBS-001',
+      recordId: 'obs_89412a',
       recordType: 'observation',
     });
     expect(projected.summary).toBe(evt001.summary);
@@ -124,17 +124,17 @@ describe('Shared Context', () => {
     expect(store.size).toBe(1);
   });
 
-  it('extracts EVT-002 metadata reference to SIGNAL / OBS-001', () => {
+  it('extracts EVT-002 metadata reference to SIGNAL / obs_89412a', () => {
     const store = new SharedContextStore();
     const evt002 = eventById('EVT-002');
     const projected = store.projectFromEvent(evt002);
 
-    expect(projected.source.recordId).toBe('INS-001');
+    expect(projected.source.recordId).toBe('ins_7721');
     expect(projected.source.recordType).toBe('insight');
     expect(projected.references).toEqual([
       {
         module: 'SIGNAL',
-        recordId: 'OBS-001',
+        recordId: 'obs_89412a',
         recordType: 'observation',
       },
     ]);
@@ -148,19 +148,19 @@ describe('Shared Context', () => {
 
     const signalEntries = store.getByModule('SIGNAL');
     expect(signalEntries.map((entry) => entry.source.recordId).sort()).toEqual([
-      'INS-001',
-      'OBS-001',
+      'ins_7721',
+      'obs_89412a',
     ]);
     expect(store.getByModule('AI')).toHaveLength(1);
     expect(store.getByModule('VAULT')).toEqual([]);
   });
 
-  it('getByReference aggregates source and nested reference matches for OBS-001', () => {
+  it('getByReference aggregates source and nested reference matches for obs_89412a', () => {
     const store = new SharedContextStore();
     store.projectFromEvent(eventById('EVT-001'));
     store.projectFromEvent(eventById('EVT-002'));
 
-    const matches = store.getByReference('OBS-001');
+    const matches = store.getByReference('obs_89412a');
     expect(matches).toHaveLength(2);
     expect(matches.map((entry) => entry.id).sort()).toEqual([
       'CTX-EVT-001',
@@ -183,7 +183,7 @@ describe('Shared Context', () => {
     expect(store.size).toBe(1);
     expect(updated?.summary).toBe('Updated observation context');
     expect(updated?.relevance).toBe('low');
-    expect(updated?.source.recordId).toBe('OBS-001');
+    expect(updated?.source.recordId).toBe('obs_89412a');
   });
 
   it('returned entries are defensively cloned from store state', () => {
@@ -194,7 +194,7 @@ describe('Shared Context', () => {
 
     const fetched = store.get(projected.id);
     expect(fetched?.summary).toBe(eventById('EVT-001').summary);
-    expect(fetched?.source.recordId).toBe('OBS-001');
+    expect(fetched?.source.recordId).toBe('obs_89412a');
     expect(fetched).not.toBe(projected);
   });
 
@@ -220,7 +220,7 @@ describe('Shared Context', () => {
     expect(fetched?.references).toEqual([
       {
         module: 'SIGNAL',
-        recordId: 'OBS-001',
+        recordId: 'obs_89412a',
         recordType: 'observation',
       },
     ]);
@@ -232,7 +232,7 @@ describe('Shared Context', () => {
     expect(store.getAll()).toEqual([]);
     expect(store.get('CTX-EVT-001')).toBeUndefined();
     expect(store.getByModule('SIGNAL')).toEqual([]);
-    expect(store.getByReference('OBS-001')).toEqual([]);
+    expect(store.getByReference('obs_89412a')).toEqual([]);
   });
 
   it('rejects invalid OSEvent.recordType at the projection boundary', () => {
@@ -241,7 +241,7 @@ describe('Shared Context', () => {
       id: 'EVT-INVALID-RECORD-TYPE',
       module: 'SIGNAL',
       action: 'created',
-      recordId: 'OBS-001',
+      recordId: 'obs_89412a',
       recordType: 'not-a-shared-context-record-type',
       timestamp: FIXED_TIMESTAMP,
       actor: 'SIGNAL-ENGINE',
@@ -282,7 +282,7 @@ describe('Shared Context', () => {
     const store = new SharedContextStore();
     store.projectFromEvent(eventById('EVT-001'));
     store.getByModule('SIGNAL');
-    store.getByReference('OBS-001');
+    store.getByReference('obs_89412a');
     expect(osEventBus.listenerCount).toBe(initialListenerCount);
     expect(osEventBus.listenerCount).toBe(0);
   });

@@ -25,8 +25,9 @@ export const PulseActivityWorkspace: React.FC<PulseActivityWorkspaceProps> = ({
 
   if (sortedActivities.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center p-12 font-mono text-xs text-[var(--muted)]">
-        NO PULSE ACTIVITIES FOUND IN REGISTRY
+      <div className="flex flex-1 items-center justify-center p-12 font-mono text-xs text-[var(--muted)] flex-col space-y-1 text-center">
+        <div>No activity yet.</div>
+        <div className="text-[10px] opacity-75">Operational activity will appear here as Pulse records communication workflow events.</div>
       </div>
     );
   }

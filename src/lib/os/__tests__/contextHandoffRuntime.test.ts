@@ -54,7 +54,7 @@ export function runOSContextHandoffRuntimeVerification(): boolean {
     return res.handoffs[0];
   }
 
-  // 1. Valid SIGNAL OBS-001 -> CONTRACT-001 -> AI (EVT-001)
+  // 1. Valid SIGNAL obs_89412a -> CONTRACT-001 -> AI (EVT-001)
   try {
     const h1 = getPreparedHandoff("EVT-001");
     const res1 = runtime.prepareContextHandoff(h1);
@@ -77,7 +77,7 @@ export function runOSContextHandoffRuntimeVerification(): boolean {
     passed = false;
   }
 
-  // 2. Valid SIGNAL INS-001 -> CONTRACT-004 -> PULSE (EVT-002)
+  // 2. Valid SIGNAL ins_7721 -> CONTRACT-004 -> PULSE (EVT-002)
   try {
     const h2 = getPreparedHandoff("EVT-002");
     const res2 = runtime.prepareContextHandoff(h2);
@@ -183,39 +183,41 @@ export function runOSContextHandoffRuntimeVerification(): boolean {
     passed = false;
   }
 
-  // 7. Missing crossModuleRefId in contract
-  const testContractNoRef: OSIntegrationContract = {
+  // 7. Unknown crossModuleRefId in contract
+  const testContractUnknownRef: OSIntegrationContract = {
     id: "CONTRACT-NO-REF",
     sourceModule: "SIGNAL",
     targetModule: "AI",
     sourceRecordType: "observation",
-    targetRecordType: "Decision",
-    purpose: "Test missing ref",
-    requiredReferences: ["OBS-001"],
+    targetRecordType: "decision",
+    purpose: "Test unknown ref",
+    crossModuleRefId: "CMR-NO-REF",
+    requiredReferences: ["obs_89412a"],
+    createdAt: "2026-01-01T00:00:00Z",
     metadata: {},
   };
 
   const testContractStore =
-    new OSIntegrationContractStore([testContractNoRef]);
+    new OSIntegrationContractStore([testContractUnknownRef]);
 
-  const customRuntimeNoRef =
+  const customRuntimeUnknownRef =
     new OSContextHandoffRuntime(
       crossModuleReferencesRegistry,
       sharedContextStore,
       testContractStore,
     );
 
-  const hNoRef: OSIntegrationHandoff = {
+  const hUnknownRef: OSIntegrationHandoff = {
     ...getPreparedHandoff("EVT-001"),
     contractId: "CONTRACT-NO-REF",
   };
 
-  const resNoRef =
-    customRuntimeNoRef.prepareContextHandoff(hNoRef);
+  const resUnknownRef =
+    customRuntimeUnknownRef.prepareContextHandoff(hUnknownRef);
 
-  if (resNoRef.status !== "invalid") {
+  if (resUnknownRef.status !== "not_found") {
     console.error(
-      "FAIL: Missing crossModuleRefId in contract was not rejected.",
+      "FAIL: Unknown crossModuleRefId in contract was not handled as not_found.",
     );
     passed = false;
   }
@@ -225,7 +227,7 @@ export function runOSContextHandoffRuntimeVerification(): boolean {
     {
       id: "REF-MISMATCH-SRC",
       sourceModule: "VAULT",
-      sourceRecordId: "OBS-001",
+      sourceRecordId: "obs_89412a",
       targetModule: "AI",
       targetRecordId: "DEC-001",
       type: "derived_from",
@@ -274,7 +276,7 @@ export function runOSContextHandoffRuntimeVerification(): boolean {
     {
       id: "REF-MISMATCH-TGT",
       sourceModule: "SIGNAL",
-      sourceRecordId: "OBS-001",
+      sourceRecordId: "obs_89412a",
       targetModule: "PULSE",
       targetRecordId: "DEC-001",
       type: "derived_from",
@@ -314,7 +316,7 @@ export function runOSContextHandoffRuntimeVerification(): boolean {
     {
       id: "REF-MISMATCH-REC",
       sourceModule: "SIGNAL",
-      sourceRecordId: "OBS-999",
+      sourceRecordId: "obs_999999",
       targetModule: "AI",
       targetRecordId: "DEC-001",
       type: "derived_from",

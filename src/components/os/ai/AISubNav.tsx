@@ -21,7 +21,7 @@ export const AISubNav: React.FC<AISubNavProps> = ({ activeTab }) => {
         return (
           <Link
             key={item.id}
-            href={`/ai?tab=${item.id}`}
+            href={`/app/ai?tab=${item.id}`}
             className={`px-4 py-3 border-b-2 flex items-center gap-2 transition-colors ${
               isActive
                 ? 'border-[var(--signal)] text-[var(--foreground)] font-bold bg-[var(--surface)]/30'

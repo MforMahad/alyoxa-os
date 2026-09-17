@@ -2,7 +2,7 @@ import React from 'react';
 import { PulseRequest } from '@/data/os/pulse';
 
 import { ExecutionTask } from '@/data/os/forge';
-import { AIDecision } from '../ai/aiDecisions';
+import { AIDecision } from '@/data/os/ai/aiDecisions';
 
 interface PulseRequestInspectorProps {
   request: PulseRequest;
@@ -71,7 +71,7 @@ export const PulseRequestInspector: React.FC<PulseRequestInspectorProps> = ({
       {/* LINEAGE */}
       <div className="border-t border-[var(--border)] pt-4 space-y-3">
         <div className="text-[10px] text-[var(--muted)] uppercase tracking-wider">
-          UPSTREAM LINEAGE
+          WORKFLOW LINEAGE
         </div>
         
         <div className="space-y-3 text-[11px]">

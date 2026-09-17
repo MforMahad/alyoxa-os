@@ -15,7 +15,7 @@ import {
 
 import { forgeTasksRegistry } from '@/data/os/forge';
 import { OverviewSidebar } from '@/components/os/OverviewSidebar';
-import { aiDecisionsRegistry } from '@/components/os/ai/aiDecisions';
+import { aiDecisionsRegistry } from '@/data/os/ai/aiDecisions';
 
 interface PulsePageProps {
   searchParams: Promise<{

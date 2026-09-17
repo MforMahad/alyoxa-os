@@ -1,512 +1,551 @@
 import {
-    osEndToEndLoopExecutor,
-    OSEndToEndLoopExecutor,
-    OSEndToEndLoopResult,
-  } from './endToEndLoop';
-  import { OSContextHandoffPackage } from './contextHandoffRuntime';
-  import { OSModuleHandoffResult } from './moduleHandoffRuntime';
-  import { OSRuntimeSafetyResult } from './runtimeSafety';
-  import { SharedContextEntry, SharedContextReference } from './sharedContext';
-  import { CrossModuleReference } from './crossModuleReferences';
-  import { osEventBus } from './eventBus';
-  import { osScenarioManager } from './scenarioDefinition';
-  
-  export type OSContextContinuityStatus = 'valid' | 'invalid';
-  
-  export interface ContextContinuityDetail {
-    stage: string;
-    verified: boolean;
-    errors: string[];
+  OSIntegrationHandoff,
+  OSIntegrationModule,
+  OSIntegrationSource,
+} from './integrationRuntime';
+import {
+  crossModuleReferencesRegistry,
+  CrossModuleReference,
+} from './crossModuleReferences';
+import {
+  sharedContextStore,
+  SharedContextEntry,
+  SharedContextStore,
+} from './sharedContext';
+import {
+  osIntegrationContractStore,
+  OSIntegrationContractStore,
+} from './integrationContracts';
+import { osScenarioManager } from './scenarioDefinition';
+import { osEndToEndLoopExecutor, OSEndToEndLoopResult } from './endToEndLoop';
+import { osEventBus } from './eventBus';
+
+export interface OSContextHandoffPackage {
+  contractId: string;
+  source: OSIntegrationSource;
+  targetModule: OSIntegrationModule;
+  targetRecordType: string;
+  references: CrossModuleReference[];
+  contextEntries: SharedContextEntry[];
+  metadata: Record<string, unknown>;
+  status: 'CONTEXT_HANDOFF_PREPARED';
+}
+
+export type OSContextHandoffStatus = 'prepared' | 'invalid' | 'not_found';
+
+export interface OSContextHandoffResult {
+  status: OSContextHandoffStatus;
+  package: OSContextHandoffPackage | null;
+  errors: string[];
+}
+
+const CANONICAL_MODULES: ReadonlySet<OSIntegrationModule> = new Set([
+  'SIGNAL',
+  'AI',
+  'FORGE',
+  'PULSE',
+  'VAULT',
+  'SYSTEM',
+]);
+
+export class OSContextHandoffRuntime {
+  private refRegistry: ReadonlyArray<CrossModuleReference>;
+  private contextStore: SharedContextStore;
+  private contractStore: OSIntegrationContractStore;
+
+  constructor(
+    refRegistry: ReadonlyArray<CrossModuleReference> = crossModuleReferencesRegistry,
+    contextStore: SharedContextStore = sharedContextStore,
+    contractStore: OSIntegrationContractStore = osIntegrationContractStore
+  ) {
+    this.refRegistry = refRegistry;
+    this.contextStore = contextStore;
+    this.contractStore = contractStore;
   }
-  
-  export interface OSContextContinuityResult {
-    status: OSContextContinuityStatus;
-    scenarioName: string;
-    sourceIdentity: {
-      module: string;
-      recordId: string;
-      recordType: string;
-    };
-    contractId: string;
-    targetIdentity: {
-      module: string;
-      recordType: string;
-    };
-    contextEntries: SharedContextEntry[];
-    references: CrossModuleReference[];
-    stages: ContextContinuityDetail[];
-    errors: string[];
-  }
-  
-  export interface ContextContinuityRuntime {
-    executeCanonicalLoop: (invocationIndex?: number) => OSEndToEndLoopResult;
-  }
-  
-  const defaultRuntime: ContextContinuityRuntime = osEndToEndLoopExecutor;
-  
-  function clone<T>(value: T): T {
-    return structuredClone(value);
-  }
-  
-  function compareContextReferences(
-    left: SharedContextReference,
-    right: SharedContextReference,
-    path: string,
-    errors: string[]
-  ): void {
-    if (left.module !== right.module) {
-      errors.push(
-        `${path}.module changed from "${left.module}" to "${right.module}".`
-      );
-    }
-  
-    if (left.recordId !== right.recordId) {
-      errors.push(
-        `${path}.recordId changed from "${left.recordId}" to "${right.recordId}".`
-      );
-    }
-  
-    if (left.recordType !== right.recordType) {
-      errors.push(
-        `${path}.recordType changed from "${left.recordType}" to "${right.recordType}".`
-      );
-    }
-  }
-  
-  function compareCrossModuleReferences(
-    left: CrossModuleReference,
-    right: CrossModuleReference,
-    path: string,
-    errors: string[]
-  ): void {
-    if (left.id !== right.id) {
-      errors.push(`${path}.id changed.`);
-    }
-  
-    if (left.sourceModule !== right.sourceModule) {
-      errors.push(`${path}.sourceModule changed.`);
-    }
-  
-    if (left.sourceRecordId !== right.sourceRecordId) {
-      errors.push(`${path}.sourceRecordId changed.`);
-    }
-  
-    if (left.targetModule !== right.targetModule) {
-      errors.push(`${path}.targetModule changed.`);
-    }
-  
-    if (left.targetRecordId !== right.targetRecordId) {
-      errors.push(`${path}.targetRecordId changed.`);
-    }
-  
-    if (left.type !== right.type) {
-      errors.push(`${path}.type changed.`);
-    }
-  }
-  
-  function compareContextEntries(
-    left: SharedContextEntry,
-    right: SharedContextEntry,
-    path: string,
-    errors: string[]
-  ): void {
-    if (left.id !== right.id) {
-      errors.push(`${path}.id changed.`);
-    }
-  
-    compareContextReferences(
-      left.source,
-      right.source,
-      `${path}.source`,
-      errors
-    );
-  
-    if (left.title !== right.title) {
-      errors.push(`${path}.title changed.`);
-    }
-  
-    if (left.summary !== right.summary) {
-      errors.push(`${path}.summary changed.`);
-    }
-  
-    if (left.timestamp !== right.timestamp) {
-      errors.push(`${path}.timestamp changed.`);
-    }
-  
-    if (left.relevance !== right.relevance) {
-      errors.push(`${path}.relevance changed.`);
-    }
-  
-    if (left.references.length !== right.references.length) {
-      errors.push(`${path}.references length changed.`);
-    }
-  
-    const referenceCount = Math.min(
-      left.references.length,
-      right.references.length
-    );
-  
-    for (let index = 0; index < referenceCount; index += 1) {
-      compareContextReferences(
-        left.references[index],
-        right.references[index],
-        `${path}.references[${index}]`,
-        errors
-      );
-    }
-  }
-  
-  function comparePackages(
-    source: OSContextHandoffPackage,
-    target: OSContextHandoffPackage,
-    errors: string[]
-  ): void {
-    if (source.contractId !== target.contractId) {
-      errors.push('Context package contractId changed.');
-    }
-  
-    if (source.source.module !== target.source.module) {
-      errors.push('Context package source module changed.');
-    }
-  
-    if (source.source.recordId !== target.source.recordId) {
-      errors.push('Context package source recordId changed.');
-    }
-  
-    if (source.source.recordType !== target.source.recordType) {
-      errors.push('Context package source recordType changed.');
-    }
-  
-    if (source.targetModule !== target.targetModule) {
-      errors.push('Context package target module changed.');
-    }
-  
-    if (source.targetRecordType !== target.targetRecordType) {
-      errors.push('Context package target recordType changed.');
-    }
-  
-    if (source.references.length !== target.references.length) {
-      errors.push('Context package references length changed.');
-    }
-  
-    const referenceCount = Math.min(
-      source.references.length,
-      target.references.length
-    );
-  
-    for (let index = 0; index < referenceCount; index += 1) {
-      compareCrossModuleReferences(
-        source.references[index],
-        target.references[index],
-        `references[${index}]`,
-        errors
-      );
-    }
-  
-    if (source.contextEntries.length !== target.contextEntries.length) {
-      errors.push('Context package contextEntries length changed.');
-    }
-  
-    const entryCount = Math.min(
-      source.contextEntries.length,
-      target.contextEntries.length
-    );
-  
-    for (let index = 0; index < entryCount; index += 1) {
-      compareContextEntries(
-        source.contextEntries[index],
-        target.contextEntries[index],
-        `contextEntries[${index}]`,
-        errors
-      );
-    }
-  }
-  
-  function verifyModuleHandoffContinuity(
-    contextPackage: OSContextHandoffPackage,
-    moduleResult: OSModuleHandoffResult,
-    errors: string[]
-  ): void {
-    if (!moduleResult.package) {
-      errors.push('Module handoff does not contain a context package.');
-      return;
-    }
-  
-    comparePackages(
-      contextPackage,
-      moduleResult.package,
-      errors
-    );
-  
-    if (moduleResult.contractId !== contextPackage.contractId) {
-      errors.push('Module handoff contractId does not match context handoff.');
-    }
-  
-    if (moduleResult.sourceRecordId !== contextPackage.source.recordId) {
-      errors.push('Module handoff sourceRecordId does not match context handoff.');
-    }
-  
-    if (moduleResult.targetModule !== contextPackage.targetModule) {
-      errors.push('Module handoff targetModule does not match context handoff.');
-    }
-  
-    if (moduleResult.targetRecordType !== contextPackage.targetRecordType) {
-      errors.push(
-        'Module handoff targetRecordType does not match context handoff.'
-      );
-    }
-  }
-  
-  function verifyRuntimeSafetyContinuity(
-    moduleResult: OSModuleHandoffResult,
-    safetyResult: OSRuntimeSafetyResult,
-    errors: string[]
-  ): void {
-    if (!safetyResult.handoffResult) {
-      errors.push('Runtime safety result does not contain a handoff result.');
-      return;
-    }
-  
-    const safetyHandoff = safetyResult.handoffResult;
-  
-    if (safetyResult.contractId !== moduleResult.contractId) {
-      errors.push('Runtime safety contractId changed.');
-    }
-  
-    if (safetyResult.sourceRecordId !== moduleResult.sourceRecordId) {
-      errors.push('Runtime safety sourceRecordId changed.');
-    }
-  
-    if (safetyResult.targetModule !== moduleResult.targetModule) {
-      errors.push('Runtime safety targetModule changed.');
-    }
-  
-    if (safetyResult.targetRecordType !== moduleResult.targetRecordType) {
-      errors.push('Runtime safety targetRecordType changed.');
-    }
-  
-    if (!safetyHandoff.package || !moduleResult.package) {
-      errors.push('Runtime safety lost the context handoff package.');
-      return;
-    }
-  
-    comparePackages(
-      moduleResult.package,
-      safetyHandoff.package,
-      errors
-    );
-  }
-  
-  export function verifyContextContinuity(
-    runtime: ContextContinuityRuntime = defaultRuntime,
-    invocationIndex: number = 1
-  ): OSContextContinuityResult {
-    const listenerCountBefore = osEventBus.listenerCount;
-  
-    const scenario = osScenarioManager.getCanonicalScenario();
-  
-    const loop = runtime.executeCanonicalLoop(invocationIndex);
-  
+
+  /**
+   * Accepts a prepared OSIntegrationHandoff and builds a deterministic OSContextHandoffPackage.
+   * Aligned strictly with Phase 12.3 SharedContextEntry & 12.4 CrossModuleReference schemas.
+   */
+  public prepareContextHandoff(
+    handoff: Readonly<OSIntegrationHandoff>
+  ): OSContextHandoffResult {
+    const safeHandoff: OSIntegrationHandoff = structuredClone(handoff);
     const errors: string[] = [];
-    const stages: ContextContinuityDetail[] = [];
-  
-    const expectedSource = {
-      module: scenario.records.signal.module,
-      recordId: scenario.records.signal.recordId,
-      recordType: 'observation',
-    };
-  
-    const eventResolution = loop.stages.eventResolution;
-    const contextHandoff = loop.stages.contextHandoff;
-    const moduleHandoff = loop.stages.moduleHandoff;
-    const runtimeSafety = loop.stages.runtimeSafety;
-  
-    /*
-     * Stage 1 — Event Resolution → Context Handoff
-     */
-    const eventErrors: string[] = [];
-  
-    if (!eventResolution) {
-      eventErrors.push('Event resolution stage is missing.');
+
+    // 1. Validate handoff status
+    if (safeHandoff.status !== 'HANDOFF_PREPARED') {
+      return {
+        status: 'invalid',
+        package: null,
+        errors: [
+          `Invalid handoff status "${safeHandoff.status}". Expected "HANDOFF_PREPARED".`,
+        ],
+      };
     }
-  
-    if (eventResolution) {
-      if (eventResolution.source.module !== expectedSource.module) {
-        eventErrors.push('Event resolution source module changed.');
-      }
-  
-      if (eventResolution.source.recordId !== expectedSource.recordId) {
-        eventErrors.push('Event resolution source recordId changed.');
-      }
-  
-      if (eventResolution.source.recordType !== expectedSource.recordType) {
-        eventErrors.push('Event resolution source recordType changed.');
-      }
+
+    // 2. Validate module vocabulary
+    if (!CANONICAL_MODULES.has(safeHandoff.source.module)) {
+      return {
+        status: 'invalid',
+        package: null,
+        errors: [`Invalid source module "${safeHandoff.source.module}".`],
+      };
     }
-  
-    if (!contextHandoff?.package) {
-      eventErrors.push('Context handoff package is missing.');
-    } else if (eventResolution) {
-      const firstHandoff = eventResolution.handoffs[0];
-  
-      if (!firstHandoff) {
-        eventErrors.push('Event resolution contains no integration handoff.');
-      } else {
-        if (
-          contextHandoff.package.source.module !== firstHandoff.source.module
-        ) {
-          eventErrors.push(
-            'Context handoff source module does not match event resolution.'
-          );
-        }
-  
-        if (
-          contextHandoff.package.source.recordId !== firstHandoff.source.recordId
-        ) {
-          eventErrors.push(
-            'Context handoff source recordId does not match event resolution.'
-          );
-        }
-  
-        if (
-          contextHandoff.package.source.recordType !==
-          firstHandoff.source.recordType
-        ) {
-          eventErrors.push(
-            'Context handoff source recordType does not match event resolution.'
-          );
-        }
-  
-        if (
-          contextHandoff.package.contractId !== firstHandoff.contractId
-        ) {
-          eventErrors.push(
-            'Context handoff contractId does not match event resolution.'
-          );
-        }
-  
-        if (
-          contextHandoff.package.targetModule !== firstHandoff.targetModule
-        ) {
-          eventErrors.push(
-            'Context handoff targetModule does not match event resolution.'
-          );
-        }
-  
-        if (
-          contextHandoff.package.targetRecordType !==
-          firstHandoff.targetRecordType
-        ) {
-          eventErrors.push(
-            'Context handoff targetRecordType does not match event resolution.'
-          );
-        }
-      }
+
+    if (!CANONICAL_MODULES.has(safeHandoff.targetModule)) {
+      return {
+        status: 'invalid',
+        package: null,
+        errors: [`Invalid target module "${safeHandoff.targetModule}".`],
+      };
     }
-  
-    if (eventErrors.length > 0) {
-      errors.push(...eventErrors);
+
+    // 3. Resolve Integration Contract using contract store helper (.getById / .getAll)
+    const contracts = this.contractStore.getAll();
+    const contract = contracts.find((c) => c.id === safeHandoff.contractId);
+
+    if (!contract) {
+      return {
+        status: 'not_found',
+        package: null,
+        errors: [
+          `Integration contract "${safeHandoff.contractId}" not found in contract store.`,
+        ],
+      };
     }
-  
-    stages.push({
-      stage: 'EVENT_TO_CONTEXT_HANDOFF',
-      verified: eventErrors.length === 0,
-      errors: eventErrors,
-    });
-  
-    /*
-     * Stage 2 — Context Handoff → Module Handoff
-     */
-    const moduleErrors: string[] = [];
-  
-    if (!contextHandoff?.package) {
-      moduleErrors.push('Context handoff package is unavailable.');
-    } else if (!moduleHandoff) {
-      moduleErrors.push('Module handoff stage is missing.');
-    } else {
-      verifyModuleHandoffContinuity(
-        contextHandoff.package,
-        moduleHandoff,
-        moduleErrors
+
+    // Validate contract-level record types and required references
+    if (safeHandoff.source.recordType !== contract.sourceRecordType) {
+      errors.push(
+        `Handoff source recordType "${safeHandoff.source.recordType}" does not match contract sourceRecordType "${contract.sourceRecordType}".`
       );
     }
-  
-    if (moduleErrors.length > 0) {
-      errors.push(...moduleErrors);
-    }
-  
-    stages.push({
-      stage: 'CONTEXT_TO_MODULE_HANDOFF',
-      verified: moduleErrors.length === 0,
-      errors: moduleErrors,
-    });
-  
-    /*
-     * Stage 3 — Module Handoff → Runtime Safety
-     */
-    const safetyErrors: string[] = [];
-  
-    if (!moduleHandoff) {
-      safetyErrors.push('Module handoff result is unavailable.');
-    } else if (!runtimeSafety) {
-      safetyErrors.push('Runtime safety stage is missing.');
-    } else {
-      verifyRuntimeSafetyContinuity(
-        moduleHandoff,
-        runtimeSafety,
-        safetyErrors
+
+    if (safeHandoff.targetRecordType !== contract.targetRecordType) {
+      errors.push(
+        `Handoff targetRecordType "${safeHandoff.targetRecordType}" does not match contract targetRecordType "${contract.targetRecordType}".`
       );
     }
-  
-    if (safetyErrors.length > 0) {
-      errors.push(...safetyErrors);
+
+    if (
+      safeHandoff.requiredReferences.length !== contract.requiredReferences.length ||
+      !safeHandoff.requiredReferences.every(
+        (val, idx) => val === contract.requiredReferences[idx]
+      )
+    ) {
+      errors.push(
+        `Handoff requiredReferences do not match contract requiredReferences.`
+      );
     }
-  
-    stages.push({
-      stage: 'MODULE_TO_RUNTIME_SAFETY',
-      verified: safetyErrors.length === 0,
-      errors: safetyErrors,
+
+    // 4. Resolve canonical CrossModuleReference
+    if (!contract.crossModuleRefId) {
+      return {
+        status: 'invalid',
+        package: null,
+        errors: [
+          `Contract "${contract.id}" does not specify a crossModuleRefId.`,
+        ],
+      };
+    }
+
+    const refMap = new Map(this.refRegistry.map((ref) => [ref.id, ref]));
+    const canonicalRef = refMap.get(contract.crossModuleRefId);
+
+    if (!canonicalRef) {
+      return {
+        status: 'not_found',
+        package: null,
+        errors: [
+          `Canonical CrossModuleReference "${contract.crossModuleRefId}" not found in registry.`,
+        ],
+      };
+    }
+
+    // 5. Validate Reference Alignment against Handoff
+    if (canonicalRef.sourceModule !== safeHandoff.source.module) {
+      errors.push(
+        `Canonical ref "${canonicalRef.id}" sourceModule "${canonicalRef.sourceModule}" does not match handoff source module "${safeHandoff.source.module}".`
+      );
+    }
+
+    if (canonicalRef.sourceRecordId !== safeHandoff.source.recordId) {
+      errors.push(
+        `Canonical ref "${canonicalRef.id}" sourceRecordId "${canonicalRef.sourceRecordId}" does not match handoff source recordId "${safeHandoff.source.recordId}".`
+      );
+    }
+
+    if (canonicalRef.targetModule !== safeHandoff.targetModule) {
+      errors.push(
+        `Canonical ref "${canonicalRef.id}" targetModule "${canonicalRef.targetModule}" does not match handoff target module "${safeHandoff.targetModule}".`
+      );
+    }
+
+    if (errors.length > 0) {
+      return {
+        status: 'invalid',
+        package: null,
+        errors,
+      };
+    }
+
+    // 6. Query Shared Context using exact locked Phase 12.3 schema (source & references array)
+    const allContextEntries = this.contextStore.getAll();
+    const relevantContextEntries = allContextEntries.filter((entry) => {
+      // Match primary source linkage
+      const matchSource =
+        entry.source.module === safeHandoff.source.module &&
+        entry.source.recordId === safeHandoff.source.recordId;
+
+      // Match target module / recordId across references array
+      const matchTargetRef = entry.references.some(
+        (ref) =>
+          ref.module === safeHandoff.targetModule &&
+          ref.recordId === canonicalRef.targetRecordId
+      );
+
+      return matchSource || matchTargetRef;
     });
-  
-    const finalPackage =
-      runtimeSafety?.handoffResult?.package ??
-      moduleHandoff?.package ??
-      contextHandoff?.package;
-  
-    const contextEntries = finalPackage
-      ? clone(finalPackage.contextEntries)
-      : [];
-  
-    const references = finalPackage
-      ? clone(finalPackage.references)
-      : [];
-  
-    const listenerCountAfter = osEventBus.listenerCount;
-  
-    if (listenerCountBefore !== listenerCountAfter) {
-      errors.push('Event bus listener count changed during verification.');
-    }
-  
-    return {
-      status: errors.length === 0 ? 'valid' : 'invalid',
-      scenarioName: scenario.name,
-      sourceIdentity: clone(expectedSource),
-      contractId: finalPackage?.contractId ?? '',
-      targetIdentity: {
-        module: finalPackage?.targetModule ?? '',
-        recordType: finalPackage?.targetRecordType ?? '',
+
+    // 7. Assemble declarative OSContextHandoffPackage
+    const handoffPackage: OSContextHandoffPackage = {
+      contractId: safeHandoff.contractId,
+      source: structuredClone(safeHandoff.source),
+      targetModule: safeHandoff.targetModule,
+      targetRecordType: safeHandoff.targetRecordType,
+      references: [structuredClone(canonicalRef)],
+      contextEntries: structuredClone(relevantContextEntries),
+      metadata: {
+        ...structuredClone(safeHandoff.metadata),
+        preparedAtStage: 'CONTEXT_HANDOFF_PREPARED',
+        resolvedRefId: canonicalRef.id,
+        resolvedTargetRecordId: canonicalRef.targetRecordId,
       },
-      contextEntries,
-      references,
-      stages,
-      errors,
+      status: 'CONTEXT_HANDOFF_PREPARED',
+    };
+
+    return {
+      status: 'prepared',
+      package: handoffPackage,
+      errors: [],
     };
   }
-  
-  export const osContextContinuityVerifier = {
-    verify: (
-      runtime: OSEndToEndLoopExecutor = osEndToEndLoopExecutor,
-      invocationIndex: number = 1
-    ): OSContextContinuityResult =>
-      verifyContextContinuity(runtime, invocationIndex),
+}
+
+export const osContextHandoffRuntime = new OSContextHandoffRuntime();
+
+export type OSContextContinuityStatus = 'valid' | 'invalid';
+
+export interface ContextContinuityDetail {
+  stage: string;
+  verified: boolean;
+  errors: string[];
+}
+
+export interface OSContextContinuityResult {
+  status: OSContextContinuityStatus;
+  scenarioName: string;
+  sourceIdentity: {
+    module: string;
+    recordId: string;
+    recordType: string;
   };
+  contractId: string;
+  targetIdentity: {
+    module: string;
+    recordType: string;
+  };
+  contextEntries: SharedContextEntry[];
+  references: CrossModuleReference[];
+  stages: ContextContinuityDetail[];
+  errors: string[];
+}
+
+export interface ContextContinuityRuntime {
+  executeCanonicalLoop: (invocationIndex?: number) => OSEndToEndLoopResult;
+}
+
+export function compareContextReferences(
+  ref1: CrossModuleReference,
+  ref2: CrossModuleReference
+): boolean {
+  return (
+    ref1.id === ref2.id &&
+    ref1.sourceModule === ref2.sourceModule &&
+    ref1.sourceRecordId === ref2.sourceRecordId &&
+    ref1.targetModule === ref2.targetModule &&
+    ref1.targetRecordId === ref2.targetRecordId &&
+    ref1.type === ref2.type
+  );
+}
+
+export function compareCrossModuleReferences(
+  refs1: CrossModuleReference[],
+  refs2: CrossModuleReference[]
+): boolean {
+  if (refs1.length !== refs2.length) return false;
+  return refs1.every((r1, i) => compareContextReferences(r1, refs2[i]));
+}
+
+export function compareSharedContextReferences(
+  refs1: SharedContextEntry['references'],
+  refs2: SharedContextEntry['references']
+): boolean {
+  if (refs1.length !== refs2.length) return false;
+  return refs1.every((r1, i) => {
+    const r2 = refs2[i];
+    return (
+      r1.module === r2.module &&
+      r1.recordId === r2.recordId &&
+      r1.recordType === r2.recordType
+    );
+  });
+}
+
+export function compareContextEntries(
+  entries1: SharedContextEntry[],
+  entries2: SharedContextEntry[]
+): boolean {
+  if (entries1.length !== entries2.length) return false;
+  return entries1.every((e1, i) => {
+    const e2 = entries2[i];
+    return (
+      e1.id === e2.id &&
+      e1.source.module === e2.source.module &&
+      e1.source.recordId === e2.source.recordId &&
+      e1.source.recordType === e2.source.recordType &&
+      e1.title === e2.title &&
+      e1.summary === e2.summary &&
+      e1.timestamp === e2.timestamp &&
+      e1.relevance === e2.relevance &&
+      e1.references.length === e2.references.length &&
+      compareSharedContextReferences(e1.references, e2.references)
+    );
+  });
+}
+
+export function comparePackages(
+  pkg1: OSContextHandoffPackage | null,
+  pkg2: OSContextHandoffPackage | null
+): boolean {
+  if (!pkg1 && !pkg2) return true;
+  if (!pkg1 || !pkg2) return false;
+  return (
+    pkg1.contractId === pkg2.contractId &&
+    pkg1.source.module === pkg2.source.module &&
+    pkg1.source.recordId === pkg2.source.recordId &&
+    pkg1.source.recordType === pkg2.source.recordType &&
+    pkg1.targetModule === pkg2.targetModule &&
+    pkg1.targetRecordType === pkg2.targetRecordType &&
+    pkg1.references.length === pkg2.references.length &&
+    compareCrossModuleReferences(pkg1.references, pkg2.references) &&
+    pkg1.contextEntries.length === pkg2.contextEntries.length &&
+    compareContextEntries(pkg1.contextEntries, pkg2.contextEntries)
+  );
+}
+
+export function verifyContextContinuity(
+  runtime: ContextContinuityRuntime = osEndToEndLoopExecutor,
+  invocationIndex: number = 1
+): OSContextContinuityResult {
+  const initialListenerCount = osEventBus.listenerCount;
+  const errors: string[] = [];
+  const stages: ContextContinuityDetail[] = [];
+
+  const scenario = osScenarioManager.getCanonicalScenario();
+  const scenarioName = scenario.name;
+  
+  if (!scenario.contracts || scenario.contracts.length === 0) {
+    const errorMsg = 'Canonical scenario defines no contracts.';
+    return {
+      status: 'invalid',
+      scenarioName,
+      sourceIdentity: { module: '', recordId: '', recordType: '' },
+      contractId: '',
+      targetIdentity: { module: 'AI', recordType: 'decision' },
+      contextEntries: [],
+      references: [],
+      stages: [{ stage: 'EVENT_TO_CONTEXT_HANDOFF', verified: false, errors: [errorMsg] }],
+      errors: [errorMsg],
+    };
+  }
+
+  const contractId = scenario.contracts[0];
+  const expectedSourceModule = scenario.records.signal.module;
+  const expectedSourceRecordId = scenario.records.signal.recordId;
+  const expectedSourceRecordType = 'observation';
+  const expectedTargetModule = 'AI';
+  const expectedTargetRecordType = 'decision';
+
+  const sourceIdentity = {
+    module: expectedSourceModule,
+    recordId: expectedSourceRecordId,
+    recordType: expectedSourceRecordType,
+  };
+
+  const targetIdentity = {
+    module: expectedTargetModule,
+    recordType: expectedTargetRecordType,
+  };
+
+  const loopResult = runtime.executeCanonicalLoop(invocationIndex);
+
+  const eventRes = loopResult.stages.eventResolution;
+  const contextHandoff = loopResult.stages.contextHandoff;
+  const moduleHandoff = loopResult.stages.moduleHandoff;
+  const runtimeSafety = loopResult.stages.runtimeSafety;
+
+  let pkg: OSContextHandoffPackage | null = null;
+  if (contextHandoff && contextHandoff.package) {
+    pkg = contextHandoff.package;
+  }
+
+  // Stage 1: EVENT_TO_CONTEXT_HANDOFF
+  const stage1Errors: string[] = [];
+  if (!eventRes) {
+    stage1Errors.push('Event resolution stage missing.');
+  } else {
+    if (!eventRes.source) {
+      stage1Errors.push('Event resolution source is missing.');
+    } else {
+      if (eventRes.source.module !== expectedSourceModule) {
+        stage1Errors.push(`Event resolution source module mismatch.`);
+      }
+      if (eventRes.source.recordId !== expectedSourceRecordId) {
+        stage1Errors.push(`Event resolution source recordId mismatch.`);
+      }
+      if (eventRes.source.recordType !== expectedSourceRecordType) {
+        stage1Errors.push(`Event resolution source recordType mismatch.`);
+      }
+    }
+  }
+
+  if (!contextHandoff) {
+    stage1Errors.push('Context handoff stage missing.');
+  } else if (!pkg) {
+    stage1Errors.push('Context handoff package is null.');
+  } else {
+    if (pkg.contractId !== contractId) {
+      stage1Errors.push(`Context package contractId mismatch.`);
+    }
+    if (pkg.targetModule !== expectedTargetModule) {
+      stage1Errors.push(`Context package targetModule mismatch.`);
+    }
+    if (pkg.targetRecordType !== expectedTargetRecordType) {
+      stage1Errors.push(`Context package targetRecordType mismatch.`);
+    }
+    if (eventRes && eventRes.source) {
+      if (pkg.source.module !== eventRes.source.module) {
+        stage1Errors.push(`Package source module does not match event source module.`);
+      }
+      if (pkg.source.recordId !== eventRes.source.recordId) {
+        stage1Errors.push(`Package source recordId does not match event source recordId.`);
+      }
+      if (pkg.source.recordType !== eventRes.source.recordType) {
+        stage1Errors.push(`Package source recordType does not match event source recordType.`);
+      }
+    }
+  }
+
+  stages.push({
+    stage: 'EVENT_TO_CONTEXT_HANDOFF',
+    verified: stage1Errors.length === 0,
+    errors: stage1Errors,
+  });
+  errors.push(...stage1Errors);
+
+  // Stage 2: CONTEXT_TO_MODULE_HANDOFF
+  const stage2Errors: string[] = [];
+  if (!moduleHandoff) {
+    stage2Errors.push('Module handoff stage missing.');
+  } else {
+    if (moduleHandoff.targetModule !== expectedTargetModule) {
+      stage2Errors.push('Module handoff targetModule mismatch.');
+    }
+    if (moduleHandoff.package) {
+      if (moduleHandoff.package.targetModule !== moduleHandoff.targetModule) {
+        stage2Errors.push('Module handoff package targetModule does not match module handoff targetModule.');
+      }
+      if (moduleHandoff.package.targetRecordType !== expectedTargetRecordType) {
+        stage2Errors.push('Module handoff package targetRecordType does not match canonical target recordType.');
+      }
+    }
+    if (!comparePackages(pkg, moduleHandoff.package)) {
+      stage2Errors.push('Module handoff package does not match context handoff package.');
+    }
+  }
+
+  stages.push({
+    stage: 'CONTEXT_TO_MODULE_HANDOFF',
+    verified: stage2Errors.length === 0,
+    errors: stage2Errors,
+  });
+  errors.push(...stage2Errors);
+
+  // Stage 3: MODULE_TO_RUNTIME_SAFETY
+  const stage3Errors: string[] = [];
+  if (!runtimeSafety) {
+    stage3Errors.push('Runtime safety stage missing.');
+  } else {
+    if (runtimeSafety.contractId !== contractId) {
+      stage3Errors.push('Runtime safety contractId mismatch.');
+    }
+    if (runtimeSafety.targetModule !== expectedTargetModule) {
+      stage3Errors.push('Runtime safety targetModule mismatch.');
+    }
+    if (runtimeSafety.sourceRecordId !== expectedSourceRecordId) {
+      stage3Errors.push('Runtime safety sourceRecordId mismatch.');
+    }
+    if (moduleHandoff && runtimeSafety.handoffResult && runtimeSafety.handoffResult.package) {
+      if (runtimeSafety.handoffResult.package.contractId !== moduleHandoff.package?.contractId) {
+        stage3Errors.push('Runtime safety handoff package contractId does not match module handoff package contractId.');
+      }
+      const matchPackages = comparePackages(
+        moduleHandoff.package,
+        runtimeSafety.handoffResult.package
+      );
+      if (!matchPackages) {
+        stage3Errors.push('Runtime safety handoff package does not match module handoff package.');
+      }
+    }
+  }
+
+  stages.push({
+    stage: 'MODULE_TO_RUNTIME_SAFETY',
+    verified: stage3Errors.length === 0,
+    errors: stage3Errors,
+  });
+  errors.push(...stage3Errors);
+
+  // Check event bus listener count invariant
+  const finalListenerCount = osEventBus.listenerCount;
+  if (finalListenerCount !== initialListenerCount) {
+    errors.push(
+      `EventBus listener count changed from ${initialListenerCount} to ${finalListenerCount}.`
+    );
+  }
+
+  const contextEntries = structuredClone(pkg?.contextEntries ?? []);
+  const references = structuredClone(pkg?.references ?? []);
+
+  const overallStatus: OSContextContinuityStatus =
+    errors.length === 0 ? 'valid' : 'invalid';
+
+  return {
+    status: overallStatus,
+    scenarioName,
+    sourceIdentity,
+    contractId,
+    targetIdentity,
+    contextEntries,
+    references,
+    stages,
+    errors,
+  };
+}
+
+export const osContextContinuityVerifier = {
+  verifyContextContinuity,
+  verify: verifyContextContinuity,
+};

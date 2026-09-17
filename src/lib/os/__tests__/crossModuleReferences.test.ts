@@ -45,14 +45,14 @@ export function runCrossModuleReferencesVerification(): boolean {
     passed = false;
   }
 
-  // Test 4: Query Outgoing References (OBS-001 -> DEC-001)
-  const outgoing = crossModuleReferenceStore.getOutgoingReferences('OBS-001');
+  // Test 4: Query Outgoing References (obs_89412a -> DEC-001)
+  const outgoing = crossModuleReferenceStore.getOutgoingReferences('obs_89412a');
   if (outgoing.length !== 1 || outgoing[0].targetRecordId !== 'DEC-001') {
     console.error('FAIL: Outgoing reference lookup returned invalid result.');
     passed = false;
   }
 
-  // Test 5: Query Incoming References (DEC-001 incoming from OBS-001 & REQ-001)
+  // Test 5: Query Incoming References (DEC-001 incoming from obs_89412a & REQ-001)
   const incoming = crossModuleReferenceStore.getIncomingReferences('DEC-001');
   if (incoming.length !== 2) {
     console.error(
@@ -137,7 +137,7 @@ describe('Cross-Module References', () => {
   it('all existing canonical relationships still work', () => {
     expect(crossModuleReferenceStore.getReference('CMR-001')).toMatchObject({
       sourceModule: 'SIGNAL',
-      sourceRecordId: 'OBS-001',
+      sourceRecordId: 'obs_89412a',
       targetModule: 'AI',
       targetRecordId: 'DEC-001',
       type: 'led_to',
@@ -151,7 +151,7 @@ describe('Cross-Module References', () => {
     });
     expect(crossModuleReferenceStore.getReference('CMR-004')).toMatchObject({
       sourceModule: 'SIGNAL',
-      sourceRecordId: 'INS-001',
+      sourceRecordId: 'ins_7721',
       targetModule: 'PULSE',
       targetRecordId: 'REQ-001',
       type: 'context_for',
@@ -179,7 +179,7 @@ describe('Cross-Module References', () => {
   });
 
   it('outgoing, incoming, and connected lookups match canonical relationships', () => {
-    const outgoing = crossModuleReferenceStore.getOutgoingReferences('OBS-001');
+    const outgoing = crossModuleReferenceStore.getOutgoingReferences('obs_89412a');
     expect(outgoing).toHaveLength(1);
     expect(outgoing[0].id).toBe('CMR-001');
     expect(outgoing[0].targetRecordId).toBe('DEC-001');
@@ -208,7 +208,7 @@ describe('Cross-Module References', () => {
       '[CrossModuleReferenceStore] Duplicate reference ID rejected: CMR-001'
     );
     expect(isolated.size).toBe(1);
-    expect(isolated.getReference('CMR-001')?.sourceRecordId).toBe('OBS-001');
+    expect(isolated.getReference('CMR-001')?.sourceRecordId).toBe('obs_89412a');
 
     expect(
       () =>
@@ -256,14 +256,14 @@ describe('Cross-Module References', () => {
       throw new Error('CMR-001 missing from canonical store.');
     }
     fetched.metadata.tampered = true;
-    fetched.sourceRecordId = 'OBS-MUTATED';
+    fetched.sourceRecordId = 'obs_MUTATED';
     fetched.label = 'mutated';
 
     const reFetched = crossModuleReferenceStore.getReference('CMR-001');
     expect(reFetched?.metadata.tampered).toBeUndefined();
-    expect(reFetched?.sourceRecordId).toBe('OBS-001');
+    expect(reFetched?.sourceRecordId).toBe('obs_89412a');
     expect(reFetched?.label).toBe(
-      'Telemetry latency observation led to rate limit threshold decision'
+      'Payment failure observation led to billing recovery decision'
     );
   });
 

@@ -12,13 +12,81 @@ export interface OSIntegrationContract {
   targetModule: OSIntegrationModule;
   sourceRecordType: string;
   targetRecordType: string;
-  purpose: string;
-  crossModuleRefId?: string;
+  crossModuleRefId: string;
   requiredReferences: string[];
+  purpose: string;
+  createdAt: string;
   metadata: Record<string, unknown>;
 }
 
-const VALID_MODULES = new Set<OSIntegrationModule>([
+export const osIntegrationContractsRegistry: OSIntegrationContract[] = [
+  {
+    id: 'CONTRACT-001',
+    sourceModule: 'SIGNAL',
+    targetModule: 'AI',
+    sourceRecordType: 'observation',
+    targetRecordType: 'decision',
+    crossModuleRefId: 'CMR-001',
+    requiredReferences: ['obs_89412a'],
+    purpose:
+      'Provide Signal billing failure observation context from Signal to AI decision evaluation.',
+    createdAt: '2026-08-30T12:00:00Z',
+    metadata: {
+      contractScope: 'billing_context_provision',
+      enforcementLevel: 'strict',
+    },
+  },
+  {
+    id: 'CONTRACT-002',
+    sourceModule: 'AI',
+    targetModule: 'FORGE',
+    sourceRecordType: 'decision',
+    targetRecordType: 'execution_task',
+    crossModuleRefId: 'CMR-002',
+    requiredReferences: ['DEC-001'],
+    purpose:
+      'Provide AI billing recovery decision context to Forge execution task creation.',
+    createdAt: '2026-08-30T12:05:00Z',
+    metadata: {
+      contractScope: 'execution_task_context_provision',
+      enforcementLevel: 'strict',
+    },
+  },
+  {
+    id: 'CONTRACT-003',
+    sourceModule: 'FORGE',
+    targetModule: 'PULSE',
+    sourceRecordType: 'execution_task',
+    targetRecordType: 'request',
+    crossModuleRefId: 'CMR-005',
+    requiredReferences: ['TASK-001'],
+    purpose:
+      'Provide Forge task context to Pulse status evaluation requests.',
+    createdAt: '2026-08-30T12:10:00Z',
+    metadata: {
+      contractScope: 'status_request_context',
+      enforcementLevel: 'strict',
+    },
+  },
+  {
+    id: 'CONTRACT-004',
+    sourceModule: 'SIGNAL',
+    targetModule: 'PULSE',
+    sourceRecordType: 'insight',
+    targetRecordType: 'request',
+    crossModuleRefId: 'CMR-004',
+    requiredReferences: ['ins_7721'],
+    purpose:
+      'Provide Signal billing failure insight context to Pulse decision evaluation requests.',
+    createdAt: '2026-08-30T12:15:00Z',
+    metadata: {
+      contractScope: 'billing_insight_evaluation_context',
+      enforcementLevel: 'strict',
+    },
+  },
+];
+
+const VALID_MODULES: ReadonlySet<string> = new Set([
   'SIGNAL',
   'AI',
   'FORGE',
@@ -27,158 +95,131 @@ const VALID_MODULES = new Set<OSIntegrationModule>([
   'SYSTEM',
 ]);
 
-function validateContract(contract: OSIntegrationContract): void {
-  if (!contract || typeof contract !== 'object') {
-    throw new Error('Contract must be a valid object.');
-  }
-  if (typeof contract.id !== 'string' || contract.id.trim() === '') {
-    throw new Error('Contract id must be a non-empty string.');
-  }
-  if (!VALID_MODULES.has(contract.sourceModule)) {
-    throw new Error(`Invalid sourceModule: ${String(contract.sourceModule)}`);
-  }
-  if (!VALID_MODULES.has(contract.targetModule)) {
-    throw new Error(`Invalid targetModule: ${String(contract.targetModule)}`);
-  }
-  if (typeof contract.sourceRecordType !== 'string' || contract.sourceRecordType.trim() === '') {
-    throw new Error('sourceRecordType must be a non-empty string.');
-  }
-  if (typeof contract.targetRecordType !== 'string' || contract.targetRecordType.trim() === '') {
-    throw new Error('targetRecordType must be a non-empty string.');
-  }
-  if (typeof contract.purpose !== 'string' || contract.purpose.trim() === '') {
-    throw new Error('purpose must be a non-empty string.');
-  }
-  if (!Array.isArray(contract.requiredReferences)) {
-    throw new Error('requiredReferences must be an array.');
-  }
-  for (const ref of contract.requiredReferences) {
-    if (typeof ref !== 'string' || ref.trim() === '') {
-      throw new Error('Every requiredReferences entry must be a non-empty string.');
-    }
-  }
-  if (contract.crossModuleRefId !== undefined) {
-    if (typeof contract.crossModuleRefId !== 'string' || contract.crossModuleRefId.trim() === '') {
-      throw new Error('crossModuleRefId must be a non-empty string if provided.');
-    }
-  }
-  if (
-    !contract.metadata ||
-    typeof contract.metadata !== 'object' ||
-    Array.isArray(contract.metadata) ||
-    Object.prototype.toString.call(contract.metadata) !== '[object Object]'
-  ) {
-    throw new Error('metadata must be a plain object.');
-  }
-}
-
-/**
- * Deterministic OS Integration Contracts Registry.
- * Purely declarative contracts defining inter-module context and reference exchange expectations.
- */
-export const osIntegrationContractsRegistry: OSIntegrationContract[] = [
-  {
-    id: 'CONTRACT-001',
-    sourceModule: 'SIGNAL',
-    targetModule: 'AI',
-    sourceRecordType: 'observation',
-    targetRecordType: 'Decision',
-    purpose: 'Provide telemetry latency observation context from Signal to AI decision evaluation.',
-    crossModuleRefId: 'CMR-001',
-    requiredReferences: ['OBS-001'],
-    metadata: {
-      contractScope: 'telemetry_context_provision',
-    },
-  },
-  {
-    id: 'CONTRACT-002',
-    sourceModule: 'AI',
-    targetModule: 'FORGE',
-    sourceRecordType: 'decision',
-    targetRecordType: 'Task',
-    purpose: 'Provide AI rate limit decision context to Forge task creation.',
-    crossModuleRefId: 'CMR-002',
-    requiredReferences: ['DEC-001'],
-    metadata: {
-      contractScope: 'task_context_provision',
-    },
-  },
-  {
-    id: 'CONTRACT-003',
-    sourceModule: 'FORGE',
-    targetModule: 'PULSE',
-    sourceRecordType: 'execution_task',
-    targetRecordType: 'Request',
-    purpose: 'Provide Forge task context to Pulse status evaluation requests.',
-    crossModuleRefId: 'CMR-005',
-    requiredReferences: ['TASK-001'],
-    metadata: {
-      contractScope: 'status_request_context',
-    },
-  },
-  {
-    id: 'CONTRACT-004',
-    sourceModule: 'SIGNAL',
-    targetModule: 'PULSE',
-    sourceRecordType: 'insight',
-    targetRecordType: 'Request',
-    purpose: 'Provide Signal insight context to Pulse decision evaluation requests.',
-    crossModuleRefId: 'CMR-004',
-    requiredReferences: ['INS-001'],
-    metadata: {
-      contractScope: 'insight_evaluation_context',
-    },
-  },
-];
-
 export class OSIntegrationContractStore {
   private contracts: Map<string, OSIntegrationContract> = new Map();
 
   constructor(initialRegistry: OSIntegrationContract[] = osIntegrationContractsRegistry) {
-    for (const item of initialRegistry) {
-      this.addContract(item);
+    for (const contract of initialRegistry) {
+      this.addContract(contract);
     }
   }
 
   addContract(contract: Readonly<OSIntegrationContract>): void {
-    validateContract(contract as OSIntegrationContract);
-    if (this.contracts.has(contract.id)) {
-      throw new Error(`Contract with ID "${contract.id}" already exists.`);
-    }
-    this.contracts.set(contract.id, structuredClone(contract));
+    this.validateContract(contract);
+    this.contracts.set(contract.id, this.cloneContract(contract));
   }
 
   getContract(id: string): OSIntegrationContract | undefined {
     const contract = this.contracts.get(id);
-    return contract ? structuredClone(contract) : undefined;
+    return contract ? this.cloneContract(contract) : undefined;
   }
 
   getAll(): OSIntegrationContract[] {
-    return Array.from(this.contracts.values()).map((c) => structuredClone(c));
+    return Array.from(this.contracts.values()).map((c) => this.cloneContract(c));
   }
 
   getBySourceModule(module: OSIntegrationModule): OSIntegrationContract[] {
     const result: OSIntegrationContract[] = [];
+  
     for (const contract of this.contracts.values()) {
       if (contract.sourceModule === module) {
-        result.push(structuredClone(contract));
+        result.push(this.cloneContract(contract));
       }
     }
+  
     return result;
   }
-
+  
   getByTargetModule(module: OSIntegrationModule): OSIntegrationContract[] {
     const result: OSIntegrationContract[] = [];
+  
     for (const contract of this.contracts.values()) {
       if (contract.targetModule === module) {
-        result.push(structuredClone(contract));
+        result.push(this.cloneContract(contract));
       }
     }
+  
     return result;
   }
 
   get size(): number {
     return this.contracts.size;
+  }
+
+  private validateContract(contract: Readonly<OSIntegrationContract>): void {
+    if (!contract.id || contract.id.trim() === '') {
+      throw new Error('[OSIntegrationContractStore] Contract id must be a non-empty string.');
+    }
+
+    if (!VALID_MODULES.has(contract.sourceModule)) {
+      throw new Error(
+        `[OSIntegrationContractStore] Invalid sourceModule "${contract.sourceModule}" for contract "${contract.id}".`
+      );
+    }
+
+    if (!VALID_MODULES.has(contract.targetModule)) {
+      throw new Error(
+        `[OSIntegrationContractStore] Invalid targetModule "${contract.targetModule}" for contract "${contract.id}".`
+      );
+    }
+
+    if (!contract.sourceRecordType || contract.sourceRecordType.trim() === '') {
+      throw new Error(
+        `[OSIntegrationContractStore] Contract "${contract.id}" sourceRecordType must be a non-empty string.`
+      );
+    }
+
+    if (!contract.targetRecordType || contract.targetRecordType.trim() === '') {
+      throw new Error(
+        `[OSIntegrationContractStore] Contract "${contract.id}" targetRecordType must be a non-empty string.`
+      );
+    }
+
+    if (!contract.purpose || contract.purpose.trim() === '') {
+      throw new Error(
+        `[OSIntegrationContractStore] Contract "${contract.id}" purpose must be a non-empty string.`
+      );
+    }
+
+    if (
+      !Array.isArray(contract.requiredReferences) ||
+      contract.requiredReferences.some(
+        (ref) => !ref || typeof ref !== 'string' || ref.trim() === ''
+      )
+    ) {
+      throw new Error(
+        `[OSIntegrationContractStore] Contract "${contract.id}" requiredReferences must be an array of non-empty strings.`
+      );
+    }
+
+    if (!contract.crossModuleRefId || contract.crossModuleRefId.trim() === '') {
+      throw new Error(
+        `[OSIntegrationContractStore] Contract "${contract.id}" crossModuleRefId must be a non-empty string.`
+      );
+    }
+
+    if (
+      !contract.metadata ||
+      Object.prototype.toString.call(contract.metadata) !== '[object Object]'
+    ) {
+      throw new Error(
+        `[OSIntegrationContractStore] Contract "${contract.id}" metadata must be a plain object.`
+      );
+    }
+
+    if (this.contracts.has(contract.id)) {
+      throw new Error(
+        `[OSIntegrationContractStore] Duplicate contract ID rejected: ${contract.id}`
+      );
+    }
+  }
+
+  private cloneContract(contract: OSIntegrationContract): OSIntegrationContract {
+    return {
+      ...contract,
+      requiredReferences: [...contract.requiredReferences],
+      metadata: contract.metadata ? structuredClone(contract.metadata) : {},
+    };
   }
 }
 

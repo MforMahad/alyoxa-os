@@ -17,7 +17,7 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
     expect(c1?.sourceModule).toBe('SIGNAL');
     expect(c1?.targetModule).toBe('AI');
     expect(c1?.crossModuleRefId).toBe('CMR-001');
-    expect(c1?.requiredReferences).toEqual(['OBS-001']);
+    expect(c1?.requiredReferences).toEqual(['obs_89412a']);
   });
 
   it('rejects duplicate contract IDs on addContract', () => {
@@ -27,9 +27,11 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
       sourceModule: 'SIGNAL',
       targetModule: 'AI',
       sourceRecordType: 'observation',
-      targetRecordType: 'Decision',
+      targetRecordType: 'decision',
       purpose: 'Duplicate test',
-      requiredReferences: ['OBS-001'],
+      requiredReferences: ['obs_89412a'],
+      crossModuleRefId: 'CMR-001',
+      createdAt: '2026-08-30T13:00:00Z',
       metadata: {},
     };
     expect(() => store.addContract(duplicate)).toThrow();
@@ -45,9 +47,11 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
         sourceModule: 'INVALID' as any,
         targetModule: 'AI',
         sourceRecordType: 'observation',
-        targetRecordType: 'Decision',
+        targetRecordType: 'decision',
         purpose: 'Invalid module',
-        requiredReferences: ['OBS-001'],
+        requiredReferences: ['obs_89412a'],
+        crossModuleRefId: 'CMR-TEST',
+        createdAt: '2026-08-30T13:00:00Z',
         metadata: {},
       })
     ).toThrow();
@@ -59,9 +63,11 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
         sourceModule: 'SIGNAL',
         targetModule: 'INVALID' as any,
         sourceRecordType: 'observation',
-        targetRecordType: 'Decision',
+        targetRecordType: 'decision',
         purpose: 'Invalid module',
-        requiredReferences: ['OBS-001'],
+        requiredReferences: ['obs_89412a'],
+        crossModuleRefId: 'CMR-TEST',
+        createdAt: '2026-08-30T13:00:00Z',
         metadata: {},
       })
     ).toThrow();
@@ -73,9 +79,11 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
         sourceModule: 'SIGNAL',
         targetModule: 'AI',
         sourceRecordType: 'observation',
-        targetRecordType: 'Decision',
+        targetRecordType: 'decision',
         purpose: 'Empty ID',
-        requiredReferences: ['OBS-001'],
+        requiredReferences: ['obs_89412a'],
+        crossModuleRefId: 'CMR-TEST',
+        createdAt: '2026-08-30T13:00:00Z',
         metadata: {},
       })
     ).toThrow();
@@ -87,9 +95,11 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
         sourceModule: 'SIGNAL',
         targetModule: 'AI',
         sourceRecordType: '',
-        targetRecordType: 'Decision',
+        targetRecordType: 'decision',
         purpose: 'Empty sourceRecordType',
-        requiredReferences: ['OBS-001'],
+        requiredReferences: ['obs_89412a'],
+        crossModuleRefId: 'CMR-TEST',
+        createdAt: '2026-08-30T13:00:00Z',
         metadata: {},
       })
     ).toThrow();
@@ -103,7 +113,9 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
         sourceRecordType: 'observation',
         targetRecordType: '',
         purpose: 'Empty targetRecordType',
-        requiredReferences: ['OBS-001'],
+        requiredReferences: ['obs_89412a'],
+        crossModuleRefId: 'CMR-TEST',
+        createdAt: '2026-08-30T13:00:00Z',
         metadata: {},
       })
     ).toThrow();
@@ -115,9 +127,11 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
         sourceModule: 'SIGNAL',
         targetModule: 'AI',
         sourceRecordType: 'observation',
-        targetRecordType: 'Decision',
+        targetRecordType: 'decision',
         purpose: '',
-        requiredReferences: ['OBS-001'],
+        requiredReferences: ['obs_89412a'],
+        crossModuleRefId: 'CMR-TEST',
+        createdAt: '2026-08-30T13:00:00Z',
         metadata: {},
       })
     ).toThrow();
@@ -129,9 +143,11 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
         sourceModule: 'SIGNAL',
         targetModule: 'AI',
         sourceRecordType: 'observation',
-        targetRecordType: 'Decision',
+        targetRecordType: 'decision',
         purpose: 'Invalid requiredReferences',
-        requiredReferences: 'OBS-001' as any,
+        requiredReferences: 'obs_89412a' as any,
+        crossModuleRefId: 'CMR-TEST',
+        createdAt: '2026-08-30T13:00:00Z',
         metadata: {},
       })
     ).toThrow();
@@ -143,9 +159,11 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
         sourceModule: 'SIGNAL',
         targetModule: 'AI',
         sourceRecordType: 'observation',
-        targetRecordType: 'Decision',
+        targetRecordType: 'decision',
         purpose: 'Invalid requiredReferences entry',
         requiredReferences: [''],
+        crossModuleRefId: 'CMR-TEST',
+        createdAt: '2026-08-30T13:00:00Z',
         metadata: {},
       })
     ).toThrow();
@@ -157,10 +175,11 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
         sourceModule: 'SIGNAL',
         targetModule: 'AI',
         sourceRecordType: 'observation',
-        targetRecordType: 'Decision',
+        targetRecordType: 'decision',
         purpose: 'Invalid crossModuleRefId',
         crossModuleRefId: '',
-        requiredReferences: ['OBS-001'],
+        requiredReferences: ['obs_89412a'],
+        createdAt: '2026-08-30T13:00:00Z',
         metadata: {},
       })
     ).toThrow();
@@ -172,9 +191,11 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
         sourceModule: 'SIGNAL',
         targetModule: 'AI',
         sourceRecordType: 'observation',
-        targetRecordType: 'Decision',
+        targetRecordType: 'decision',
         purpose: 'Invalid metadata',
-        requiredReferences: ['OBS-001'],
+        requiredReferences: ['obs_89412a'],
+        crossModuleRefId: 'CMR-TEST',
+        createdAt: '2026-08-30T13:00:00Z',
         metadata: null as any,
       })
     ).toThrow();
@@ -185,9 +206,11 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
         sourceModule: 'SIGNAL',
         targetModule: 'AI',
         sourceRecordType: 'observation',
-        targetRecordType: 'Decision',
+        targetRecordType: 'decision',
         purpose: 'Invalid metadata array',
-        requiredReferences: ['OBS-001'],
+        requiredReferences: ['obs_89412a'],
+        crossModuleRefId: 'CMR-TEST',
+        createdAt: '2026-08-30T13:00:00Z',
         metadata: [] as any,
       })
     ).toThrow();
@@ -202,13 +225,13 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
     }
 
     const fetchedAgain = osIntegrationContractStore.getContract('CONTRACT-001');
-    expect(fetchedAgain?.requiredReferences).toEqual(['OBS-001']);
+    expect(fetchedAgain?.requiredReferences).toEqual(['obs_89412a']);
     expect(fetchedAgain?.metadata.hacked).toBeUndefined();
 
     const all = osIntegrationContractStore.getAll();
     all[0].requiredReferences.push('TAMPERED');
     const allAgain = osIntegrationContractStore.getAll();
-    expect(allAgain[0].requiredReferences).toEqual(['OBS-001']);
+    expect(allAgain[0].requiredReferences).toEqual(['obs_89412a']);
   });
 
   it('supports source and target module queries correctly', () => {
@@ -231,6 +254,8 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
       targetRecordType: 'sys_ack',
       purpose: 'Custom test',
       requiredReferences: ['SYS-001'],
+      crossModuleRefId: 'CMR-TEST',
+      createdAt: '2026-08-30T13:00:00Z',
       metadata: {},
     });
 

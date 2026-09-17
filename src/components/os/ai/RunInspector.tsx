@@ -1,8 +1,8 @@
 import React from 'react';
-import { AIRun, AIRunStatus } from '@/data/os/aiRuns';
+import { AIRun, AIRunStatus } from '@/data/os/ai/aiRuns';
 
-import { AIContextItem } from '@/data/os/aiCore';
-import { AIDecision } from './aiDecisions';
+import { AIContextItem } from '@/data/os/ai/aiCore';
+import { AIDecision } from '../../../data/os/ai/aiDecisions';
 
 interface RunInspectorProps {
   run: AIRun;

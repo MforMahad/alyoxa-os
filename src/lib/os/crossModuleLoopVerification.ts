@@ -52,11 +52,11 @@ const CANONICAL_LINKS: CanonicalLinkSpec[] = [
     linkId: 'CMR-001',
     contractId: 'CONTRACT-001',
     expectedSourceModule: 'SIGNAL',
-    expectedSourceRecord: 'OBS-001',
+    expectedSourceRecord: 'obs_89412a',
     expectedSourceRecordType: 'observation',
     expectedTargetModule: 'AI',
     expectedTargetRecord: 'DEC-001',
-    expectedTargetRecordType: 'Decision',
+    expectedTargetRecordType: 'decision',
   },
   {
     linkId: 'CMR-002',
@@ -66,7 +66,7 @@ const CANONICAL_LINKS: CanonicalLinkSpec[] = [
     expectedSourceRecordType: 'decision',
     expectedTargetModule: 'FORGE',
     expectedTargetRecord: 'TASK-001',
-    expectedTargetRecordType: 'Task',
+    expectedTargetRecordType: 'execution_task',
   },
   {
     linkId: 'CMR-005',
@@ -76,17 +76,17 @@ const CANONICAL_LINKS: CanonicalLinkSpec[] = [
     expectedSourceRecordType: 'execution_task',
     expectedTargetModule: 'PULSE',
     expectedTargetRecord: 'REQ-001',
-    expectedTargetRecordType: 'Request',
+    expectedTargetRecordType: 'request',
   },
   {
     linkId: 'CMR-004',
     contractId: 'CONTRACT-004',
     expectedSourceModule: 'SIGNAL',
-    expectedSourceRecord: 'INS-001',
+    expectedSourceRecord: 'ins_7721',
     expectedSourceRecordType: 'insight',
     expectedTargetModule: 'PULSE',
     expectedTargetRecord: 'REQ-001',
-    expectedTargetRecordType: 'Request',
+    expectedTargetRecordType: 'request',
   },
 ];
 
@@ -139,8 +139,6 @@ export function verifyCrossModuleLoop(customRegistries?: VerificationRegistries)
       if (ref.targetRecordId !== spec.expectedTargetRecord) {
         linkErrors.push(`Reference ${spec.linkId} targetRecordId "${ref.targetRecordId}" does not match expected "${spec.expectedTargetRecord}"`);
       }
-
-
 
       if (contract.sourceRecordType !== spec.expectedSourceRecordType) {
         linkErrors.push(`Contract ${spec.contractId} sourceRecordType "${contract.sourceRecordType}" does not match expected "${spec.expectedSourceRecordType}"`);

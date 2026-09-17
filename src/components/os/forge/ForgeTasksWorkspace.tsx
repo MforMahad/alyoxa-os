@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react';
 import { ExecutionTask, ExecutionNode } from '@/data/os/forge';
-import { AIRun } from '@/data/os/aiRuns';
-import { AIContextItem } from '@/data/os/aiCore';
+import { AIRun } from '@/data/os/ai/aiRuns';
+import { AIContextItem } from '@/data/os/ai/aiCore';
 import { ExecutionTaskRow } from './ExecutionTaskRow';
 import { ExecutionTaskInspector } from './ExecutionTaskInspector';
-import { AIDecision } from '../ai/aiDecisions';
+import { AIDecision } from '../../../data/os/ai/aiDecisions';
 
 interface ForgeTasksWorkspaceProps {
   tasks: ExecutionTask[];
@@ -52,8 +52,9 @@ export const ForgeTasksWorkspace: React.FC<ForgeTasksWorkspaceProps> = ({
               />
             ))
           ) : (
-            <div className="p-8 text-center font-mono text-xs text-[var(--muted)]">
-              NO EXECUTION TASKS RECEIVED
+            <div className="p-8 text-center font-mono text-xs text-[var(--muted)] space-y-1">
+              <div>No execution tasks yet.</div>
+              <div className="text-[10px] opacity-75">Tasks will appear here when AI decisions enter the Forge execution flow.</div>
             </div>
           )}
         </div>

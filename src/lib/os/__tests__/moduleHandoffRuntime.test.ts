@@ -67,7 +67,7 @@ export function runOSModuleHandoffRuntimeVerification(): boolean {
     return contextRes.package;
   }
 
-  // 1. Valid SIGNAL OBS-001 -> AI (EVT-001)
+  // 1. Valid SIGNAL obs_89412a -> AI (EVT-001)
   try {
     const pkg1 = getPreparedPackage("EVT-001");
     const res1 =
@@ -76,8 +76,8 @@ export function runOSModuleHandoffRuntimeVerification(): boolean {
     if (
       res1.status !== "prepared" ||
       res1.targetModule !== "AI" ||
-      res1.targetRecordType !== "Decision" ||
-      res1.sourceRecordId !== "OBS-001" ||
+      res1.targetRecordType !== "decision" ||
+      res1.sourceRecordId !== "obs_89412a" ||
       res1.contractId !== "CONTRACT-001" ||
       res1.package?.references[0]?.id !== "CMR-001"
     ) {
@@ -94,7 +94,7 @@ export function runOSModuleHandoffRuntimeVerification(): boolean {
     passed = false;
   }
 
-  // 2. Valid SIGNAL INS-001 -> PULSE (EVT-002)
+  // 2. Valid SIGNAL ins_7721 -> PULSE (EVT-002)
   try {
     const pkg2 = getPreparedPackage("EVT-002");
     const res2 =
@@ -103,8 +103,8 @@ export function runOSModuleHandoffRuntimeVerification(): boolean {
     if (
       res2.status !== "prepared" ||
       res2.targetModule !== "PULSE" ||
-      res2.targetRecordType !== "Request" ||
-      res2.sourceRecordId !== "INS-001" ||
+      res2.targetRecordType !== "request" ||
+      res2.sourceRecordId !== "ins_7721" ||
       res2.contractId !== "CONTRACT-004"
     ) {
       console.error(
@@ -129,7 +129,7 @@ export function runOSModuleHandoffRuntimeVerification(): boolean {
     if (
       res3.status !== "prepared" ||
       res3.targetModule !== "FORGE" ||
-      res3.targetRecordType !== "Task" ||
+      res3.targetRecordType !== "execution_task" ||
       res3.sourceRecordId !== "DEC-001" ||
       res3.contractId !== "CONTRACT-002"
     ) {
@@ -155,7 +155,7 @@ export function runOSModuleHandoffRuntimeVerification(): boolean {
     if (
       res7.status !== "prepared" ||
       res7.targetModule !== "PULSE" ||
-      res7.targetRecordType !== "Request" ||
+      res7.targetRecordType !== "request" ||
       res7.sourceRecordId !== "TASK-001" ||
       res7.contractId !== "CONTRACT-003"
     ) {
@@ -252,7 +252,7 @@ export function runOSModuleHandoffRuntimeVerification(): boolean {
     {
       id: "REF-001",
       sourceModule: "VAULT",
-      sourceRecordId: "OBS-001",
+      sourceRecordId: "obs_89412a",
       targetModule: "AI",
       targetRecordId: "DEC-001",
       type: "derived_from",
@@ -284,7 +284,7 @@ export function runOSModuleHandoffRuntimeVerification(): boolean {
     {
       id: "REF-001",
       sourceModule: "SIGNAL",
-      sourceRecordId: "OBS-001",
+      sourceRecordId: "obs_89412a",
       targetModule: "PULSE",
       targetRecordId: "DEC-001",
       type: "derived_from",
@@ -316,7 +316,7 @@ export function runOSModuleHandoffRuntimeVerification(): boolean {
   const vaultRef: CrossModuleReference = {
     id: "REF-VAULT-001",
     sourceModule: "SIGNAL",
-    sourceRecordId: "OBS-001",
+    sourceRecordId: "obs_89412a",
     targetModule: "VAULT",
     targetRecordId: "VLT-001",
     type: "derived_from",
@@ -325,10 +325,18 @@ export function runOSModuleHandoffRuntimeVerification(): boolean {
   };
 
   const validVaultPackage: OSContextHandoffPackage = {
-    ...getPreparedPackage("EVT-001"),
+    status: "CONTEXT_HANDOFF_PREPARED",
+    contractId: "CONTRACT-VAULT-001",
+    source: {
+      module: "SIGNAL",
+      recordId: "obs_89412a",
+      recordType: "observation",
+    },
     targetModule: "VAULT",
     targetRecordType: "VaultRecord",
     references: [vaultRef],
+    contextEntries: [],
+    metadata: {},
   };
 
   const vaultRuntime =

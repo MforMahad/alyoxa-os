@@ -1,31 +1,24 @@
 // ==================================================
 // VAULT CORE TYPES
 // ==================================================
-
 export type VaultItemType =
   | 'file'
   | 'document'
   | 'brand_asset'
   | 'project_resource'
   | 'template';
-
 export type VaultItemStatus = 'active' | 'archived';
-
 export type VaultVisibility = 'private' | 'workspace' | 'shared';
-
 export type KnowledgeEntryStatus = 'active' | 'archived';
-
 export type KnowledgeEntryType =
   | 'client_context'
   | 'project_knowledge'
   | 'decision_record'
   | 'operational_note'
   | 'internal_knowledge';
-
 // ==================================================
 // VAULT FOLDER INTERFACE
 // ==================================================
-
 export interface VaultFolder {
   id: string;
   name: string;
@@ -34,11 +27,9 @@ export interface VaultFolder {
   createdAt: string;
   updatedAt: string;
 }
-
 // ==================================================
 // VAULT ITEM INTERFACE
 // ==================================================
-
 export interface VaultItem {
   id: string;
   name: string;
@@ -56,11 +47,9 @@ export interface VaultItem {
   createdBy: string;
   metadata: Record<string, unknown>;
 }
-
 // ==================================================
 // KNOWLEDGE ENTRY INTERFACE
 // ==================================================
-
 export interface VaultKnowledgeEntry {
   id: string;
   type: KnowledgeEntryType;
@@ -75,11 +64,9 @@ export interface VaultKnowledgeEntry {
   createdBy: string;
   metadata: Record<string, unknown>;
 }
-
 // ==================================================
 // FIXTURE REGISTRIES
 // ==================================================
-
 export const vaultFoldersRegistry: VaultFolder[] = [
   {
     id: 'FOLDER-CLIENTS',
@@ -96,7 +83,6 @@ export const vaultFoldersRegistry: VaultFolder[] = [
     updatedAt: '2026-08-30T08:05:00Z',
   },
 ];
-
 export const vaultItemsRegistry: VaultItem[] = [
   {
     id: 'ITEM-001',
@@ -176,7 +162,6 @@ export const vaultItemsRegistry: VaultItem[] = [
     },
   },
 ];
-
 export const vaultKnowledgeRegistry: VaultKnowledgeEntry[] = [
   {
     id: 'KNOW-001',
@@ -201,7 +186,7 @@ export const vaultKnowledgeRegistry: VaultKnowledgeEntry[] = [
     status: 'active',
     title: 'ALYOXA OS Visual System Standards',
     summary: 'Design primitives and theme tokens strictly permitted across runtime workspaces.',
-    content: 'All runtime workspaces must enforce dark surface palettes, hairline borders, Satoshi typography, and monospace metadata. Primary orange is reserved strictly for active selection and key operational emphasis.',
+    content: 'All runtime workspaces must follow the Cyprus and Sand design system: Sand (#F0EDE4), Cyprus (#004741), Foreground (#0B1715), Surface (#E8E4D9), Surface elevated (#DCD8CC), Border (#C8C4B8), Muted (#596560), Primary accent (#004741), and Primary-soft (#336F69). The design direction is editorial, architectural, premium, sophisticated, restrained, and typography-led, rejecting generic SaaS aesthetics, dark AI/HUD aesthetics, purple/blue gradients, neon glows, decorative technical metadata, and excessive rounded cards.',
     tags: ['design-system', 'ui-rules', 'tokens'],
     sourceItemId: 'ITEM-002',
     createdAt: '2026-08-30T08:35:00Z',
@@ -228,25 +213,21 @@ export const vaultKnowledgeRegistry: VaultKnowledgeEntry[] = [
     },
   },
 ];
-
 // ==================================================
 // PHASE 11.6: VAULT CONTEXT & REFERENCES DATA MODEL
 // ==================================================
-
 export type VaultReferenceSource =
   | 'SIGNAL'
   | 'AI'
   | 'FORGE'
   | 'PULSE'
   | 'VAULT';
-
 export type VaultReferenceType =
   | 'source'
   | 'related'
   | 'derived_from'
   | 'supports'
   | 'context';
-
 export interface VaultReference {
   id: string;
   sourceModule: VaultReferenceSource;
@@ -258,12 +239,11 @@ export interface VaultReference {
   createdAt: string;
   metadata: Record<string, unknown>;
 }
-
 export const vaultReferencesRegistry: VaultReference[] = [
   {
     id: 'REF-001',
     sourceModule: 'SIGNAL',
-    sourceRecordId: 'INS-001',
+    sourceRecordId: 'ins_7721',
     targetModule: 'VAULT',
     targetRecordId: 'KNOW-001',
     type: 'derived_from',
@@ -326,4 +306,4 @@ export const vaultReferencesRegistry: VaultReference[] = [
     createdAt: '2026-08-26T08:00:00Z',
     metadata: {},
   },
-];  
+];

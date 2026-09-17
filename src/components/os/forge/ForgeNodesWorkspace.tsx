@@ -41,8 +41,9 @@ export const ForgeNodesWorkspace: React.FC<ForgeNodesWorkspaceProps> = ({
               />
             ))
           ) : (
-            <div className="p-8 text-center font-mono text-xs text-[var(--muted)]">
-              NO EXECUTION NODES REGISTERED
+            <div className="p-8 text-center font-mono text-xs text-[var(--muted)] space-y-1">
+              <div>No execution nodes yet.</div>
+              <div className="text-[10px] opacity-75">Configured execution targets will appear here when available.</div>
             </div>
           )}
         </div>

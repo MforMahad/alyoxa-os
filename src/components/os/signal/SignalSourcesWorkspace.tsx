@@ -41,7 +41,7 @@ export const SignalSourcesWorkspace: React.FC<SignalSourcesWorkspaceProps> = ({ 
         <div className="flex flex-col border-r border-[var(--border)]/40 pr-3">
           <span className="text-[10px] text-[var(--muted)] uppercase">Active Pipeline</span>
           <span className="text-base font-bold text-[var(--signal)]">
-            {activeSourcesCount} <span className="text-xs font-normal text-[var(--muted)]">/ {sources.length} ONLINE</span>
+            {activeSourcesCount} <span className="text-xs font-normal text-[var(--muted)]">/ {sources.length}</span>
           </span>
         </div>
         <div className="flex flex-col">
@@ -69,20 +69,27 @@ export const SignalSourcesWorkspace: React.FC<SignalSourcesWorkspaceProps> = ({ 
               <span>Status</span>
             </div>
 
-            {/* Source Rows */}
-            {sources.map((src) => (
-              <FeedSourceRow
-                key={src.id}
-                source={src}
-                isSelected={src.id === selectedSource?.id}
-                onSelect={() => setSelectedSourceId(src.id)}
-              />
-            ))}
+            {/* Source Rows or Honest Empty State */}
+            {sources.length === 0 ? (
+              <div className="p-12 font-mono text-xs text-[var(--muted)] text-center space-y-1">
+                <div>No sources connected yet.</div>
+                <div className="text-[10px] opacity-75">Connect a source to begin observing organizational activity.</div>
+              </div>
+            ) : (
+              sources.map((src) => (
+                <FeedSourceRow
+                  key={src.id}
+                  source={src}
+                  isSelected={src.id === selectedSource?.id}
+                  onSelect={() => setSelectedSourceId(src.id)}
+                />
+              ))
+            )}
           </div>
 
           <div className="px-4 py-2 font-mono text-[10px] text-[var(--muted)] bg-[var(--surface)]/20 border-t border-[var(--border)]/40 flex justify-between">
-            <span>REGISTRY_STATE: ONLINE</span>
-            <span>INBOUND_PROTOCOL: WEBHOOK_POLL</span>
+            <span>REGISTRY_MODE: STATIC</span>
+            <span>SOURCE TYPES: WEBHOOK / TELEMETRY / API POLL / SYSTEM LOG</span>
           </div>
         </div>
 

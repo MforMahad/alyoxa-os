@@ -2,10 +2,10 @@
 
 import React, { useState } from 'react';
 
-import { AIContextItem } from '@/data/os/aiCore';
+import { AIContextItem } from '@/data/os/ai/aiCore';
 import { DecisionRow } from './DecisionRow';
 import { DecisionInspector } from './DecisionInspector';
-import { AIDecision } from './aiDecisions';
+import { AIDecision } from '../../../data/os/ai/aiDecisions';
 
 interface AIDecisionsWorkspaceProps {
   decisions: AIDecision[];
@@ -49,8 +49,9 @@ export const AIDecisionsWorkspace: React.FC<AIDecisionsWorkspaceProps> = ({
               />
             ))
           ) : (
-            <div className="p-8 text-center font-mono text-xs text-[var(--muted)]">
-              NO AI DECISIONS PRODUCED
+            <div className="p-8 text-center font-mono text-xs text-[var(--muted)] space-y-1">
+              <div>No decisions yet.</div>
+              <div className="text-[10px] opacity-75">AI decisions will appear here when context is evaluated.</div>
             </div>
           )}
         </div>

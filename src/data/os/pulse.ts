@@ -1,4 +1,4 @@
-import { aiDecisionsRegistry } from '@/components/os/ai/aiDecisions';
+import { aiDecisionsRegistry } from '@/data/os/ai/aiDecisions';
 import { forgeTasksRegistry } from './forge';
 
 // Verify upstream lineage references
@@ -165,7 +165,7 @@ export const pulseThreadsRegistry: PulseThread[] = [
       {
         id: 'MSG-003',
         authorId: 'SYS-ORCHESTRATOR',
-        content: 'Task TASK-002 placed in execution queue for NODE-INFRASTRUCTURE.',
+        content: 'Task TASK-002 placed in the infrastructure execution queue.',
         createdAt: '2026-08-30T11:11:00Z',
       },
     ],

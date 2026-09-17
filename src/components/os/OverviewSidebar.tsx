@@ -1,28 +1,60 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { navigationConfig, systemMetricsConfig } from '@/data/os/overview';
+import { navigationConfig } from '@/data/os/overview';
 
-export const OverviewSidebar: React.FC = () => {
+interface OverviewSidebarProps {
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
+}
+
+export const OverviewSidebar: React.FC<OverviewSidebarProps> = ({ mobileOpen = false, onCloseMobile }) => {
   const pathname = usePathname();
 
-  return (
-    <aside className="w-56 h-screen sticky top-0 flex flex-col justify-between border-r border-[var(--border)] bg-[var(--background)] p-4 select-none z-30 shrink-0">
+  // Close mobile drawer on navigation or escape key
+  useEffect(() => {
+    onCloseMobile?.();
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCloseMobile?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onCloseMobile]);
+
+  const sidebarContent = (
+    <div className="w-full h-full flex flex-col justify-between bg-[#0B1715] p-4 select-none text-[#F0EDE4] overflow-y-auto">
       <div className="space-y-8">
         {/* Brand Header */}
-        <div className="flex items-center gap-2.5 px-2 pt-1">
-          <div className="w-2.5 h-2.5 rounded-sm bg-[var(--primary)]" />
-          <span className="font-bold text-xs tracking-[0.2em] text-[var(--foreground)] uppercase font-mono">
-            ALYOXA OS
-          </span>
+        <div className="flex items-center justify-between px-2 pt-1">
+          <div className="flex items-center gap-2.5">
+            <div className="w-2.5 h-2.5 rounded-sm bg-[#004741]" />
+            <span className="font-bold text-xs tracking-[0.2em] text-[#F0EDE4] uppercase font-mono">
+              ALYOXA OS
+            </span>
+          </div>
+          {/* Mobile Close Button */}
+          {mobileOpen && (
+            <button
+              onClick={onCloseMobile}
+              className="lg:hidden text-[#596560] hover:text-[#F0EDE4] p-1 border border-white/10"
+              aria-label="Close navigation"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
-        {/* Primary OS Navigation */}
+        {/* Primary OS Navigation (Workspace) */}
         <nav className="space-y-1">
-          <div className="px-2 pb-2 text-[10px] font-mono tracking-widest text-[var(--muted)] uppercase opacity-60">
-            Nodes &amp; Core
+          <div className="px-2 pb-2 text-[15px] font-bold tracking-widest text-[#d5d7d6] uppercase">
+            Workspace
           </div>
           {navigationConfig.primary.map((item) => {
             const isActive = pathname === item.href;
@@ -30,15 +62,15 @@ export const OverviewSidebar: React.FC = () => {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-mono tracking-wider transition-colors border-l-2 ${
+                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs tracking-wider transition-colors border-l-2 ${
                   isActive
-                    ? 'border-[var(--primary)] text-[var(--foreground)] bg-[var(--surface)] font-bold'
-                    : 'border-transparent text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)]/50'
+                    ? 'border-[#004741] text-[#F0EDE4] bg-white/5 font-bold'
+                    : 'border-transparent text-[#bcbcbc] hover:text-[#F0EDE4] hover:bg-white/5'
                 }`}
               >
                 <span>{item.label}</span>
                 {item.badge && (
-                  <span className="text-[9px] px-1 py-0.2 bg-[var(--signal)]/10 text-[var(--signal)] border border-[var(--signal)]/30 font-mono">
+                  <span className="text-[9px] px-1 py-0.2 bg-[#004741]/20 text-[#f1f1f1] border border-[#004741]/40 font-mono">
                     {item.badge}
                   </span>
                 )}
@@ -47,9 +79,9 @@ export const OverviewSidebar: React.FC = () => {
           })}
         </nav>
 
-        {/* Secondary OS Navigation */}
-        <nav className="space-y-1 pt-4 border-t border-[var(--border)]/50">
-          <div className="px-2 pb-2 text-[10px] font-mono tracking-widest text-[var(--muted)] uppercase opacity-60">
+        {/* Secondary OS Navigation (System) */}
+        <nav className="space-y-1 pt-4 border-t border-white/10">
+          <div className="px-2 pb-2 text-[15px] font-bold tracking-widest text-[#d5d7d6] uppercase">
             System
           </div>
           {navigationConfig.system.map((item) => {
@@ -58,10 +90,10 @@ export const OverviewSidebar: React.FC = () => {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-mono tracking-wider transition-colors border-l-2 ${
+                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs tracking-wider transition-colors border-l-2 ${
                   isActive
-                    ? 'border-[var(--primary)] text-[var(--foreground)] bg-[var(--surface)] font-bold'
-                    : 'border-transparent text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)]/50'
+                    ? 'border-[#004741] text-[#F0EDE4] bg-white/5 font-bold'
+                    : 'border-transparent text-[#bcbcbc] hover:text-[#F0EDE4] hover:bg-white/5'
                 }`}
               >
                 <span>{item.label}</span>
@@ -71,17 +103,35 @@ export const OverviewSidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* System Runtime Footer */}
-      <div className="p-2 border border-[var(--border)] bg-[var(--surface)]/40 font-mono text-[10px] space-y-1">
-        <div className="flex justify-between text-[var(--muted)]">
-          <span>HOST</span>
-          <span className="text-[var(--foreground)]">{systemMetricsConfig.host}</span>
-        </div>
-        <div className="flex justify-between text-[var(--muted)]">
-          <span>LATENCY</span>
-          <span className="text-[var(--signal)]">{systemMetricsConfig.latency}</span>
-        </div>
+      {/* Clean Bottom Area */}
+      <div className="px-2 py-3 border-t border-white/10 text-[10px] font-mono text-[#596560] tracking-wider uppercase">
+        ALYOXA // 2026
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Persistent Sidebar (Fixed 224px width, hidden on mobile) */}
+      <aside className="w-56 h-screen sticky top-0 border-r border-white/10 bg-[#0B1715] select-none z-30 shrink-0 hidden lg:flex flex-col">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile Off-Canvas Drawer (~80-85vw wide, positioned above workspace with translucent overlay) */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          {/* Backdrop Overlay */}
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            onClick={onCloseMobile}
+            aria-hidden="true"
+          />
+          {/* Drawer Panel */}
+          <div className="relative w-[82vw] max-w-xs h-full bg-[#0B1715] border-r border-white/10 shadow-2xl z-10 flex flex-col transform transition-transform duration-300 ease-out">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+    </>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { AIRun, AIRunStatus, AIRunTrigger } from '@/data/os/aiRuns';
+import { AIRun, AIRunStatus, AIRunTrigger } from '@/data/os/ai/aiRuns';
 
 interface RunRowProps {
   run: AIRun;

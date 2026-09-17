@@ -1,0 +1,139 @@
+// src/app/login/page.tsx
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+
+export default function LoginPage() {
+  const router = useRouter()
+  const supabase = createClient()
+
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (isLoading) return
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (authError) {
+        setError('We couldn\'t sign you in with those credentials. Please check your email and password and try again.')
+        setIsLoading(false)
+        return
+      }
+
+      router.push('/app')
+      router.refresh()
+    } catch {
+      setError('We couldn\'t sign you in with those credentials. Please check your email and password and try again.')
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] flex items-center justify-center p-6 md:p-12 selection:bg-[var(--primary)]/30">
+      <div className="w-full max-w-xl bg-[var(--surface)] border border-[var(--border)] p-8 md:p-14 shadow-sm">
+        
+        {/* Header Section */}
+        <div className="space-y-4 mb-8">
+          <div className="font-mono text-[10px] tracking-widest text-[var(--muted)] uppercase">
+            ALYOXA OS
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-[var(--foreground)] font-[family-name:var(--font-satoshi)]">
+            SIGN <span className=" font-bold text-[var(--primary)]">IN.</span>
+          </h1>
+          <p className="text-sm text-[var(--muted)] leading-relaxed">
+            Enter your email and password to continue.
+          </p>
+        </div>
+
+        {error && (
+          <div 
+            role="alert" 
+            className="mb-6 p-4 border border-[var(--primary)]/30 bg-[var(--background)] text-xs text-[var(--foreground)]"
+          >
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleLogin} className="space-y-5">
+          <div className="space-y-2">
+            <label 
+              htmlFor="email" 
+              className="block font-mono text-[10px] tracking-widest uppercase text-[var(--muted)]"
+            >
+              Email address
+            </label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+              className="w-full bg-[var(--background)] border border-[var(--border)] px-4 py-3 text-sm text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)] transition-colors disabled:opacity-50"
+              placeholder="name@company.com"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label 
+              htmlFor="password" 
+              className="block font-mono text-[10px] tracking-widest uppercase text-[var(--muted)]"
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              className="w-full bg-[var(--background)] border border-[var(--border)] px-4 py-3 text-sm text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)] transition-colors disabled:opacity-50"
+              placeholder="••••••••••••"
+            />
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full inline-flex items-center justify-between gap-4 px-6 py-3.5 text-xs font-mono tracking-[0.2em] uppercase bg-[var(--primary)] text-[var(--background)] border border-[var(--primary)] hover:bg-[var(--primary-soft)] hover:border-[var(--primary-soft)] transition-all duration-200 active:scale-[0.99] group disabled:opacity-50 disabled:pointer-events-none select-none"
+            >
+              <span>{isLoading ? 'SIGNING IN...' : 'SIGN IN'}</span>
+              <span className="transition-transform duration-200 transform group-hover:translate-x-1">
+                ↗
+              </span>
+            </button>
+          </div>
+        </form>
+
+        {/* Footer Link */}
+        <div className="mt-8 pt-6 border-t border-[var(--border)]">
+          <Link
+            href="/signup"
+            className="text-xs font-mono tracking-wider uppercase text-[var(--primary)] hover:underline block hover:cursor-pointer  "
+          >
+            Don&apos;t have an account? Sign up ↗
+          </Link>
+        </div>
+
+      </div>
+    </main>
+  )
+}

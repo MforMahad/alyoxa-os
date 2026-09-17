@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AIContextItem } from '@/data/os/aiCore';
+import { AIContextItem } from '@/data/os/ai/aiCore';
 import { AIContextRow } from './AIContextRow';
 import { AIContextInspector } from './AIContextInspector';
 
@@ -45,8 +45,9 @@ export const AIContextWorkspace: React.FC<AIContextWorkspaceProps> = ({
               />
             ))
           ) : (
-            <div className="p-8 text-center font-mono text-xs text-[var(--muted)]">
-              NO ACTIVE CONTEXT FRAMES
+            <div className="p-8 text-center font-mono text-xs text-[var(--muted)] space-y-1">
+              <div>No context items yet.</div>
+              <div className="text-[10px] opacity-75">Relevant system context will appear here as AI processes organizational activity.</div>
             </div>
           )}
         </div>

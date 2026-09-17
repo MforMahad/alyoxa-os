@@ -1,5 +1,5 @@
 import React from 'react';
-import { AIContextItem, ContextRelevance } from '@/data/os/aiCore';
+import { AIContextItem, ContextRelevance } from '@/data/os/ai/aiCore';
 
 interface AIContextInspectorProps {
   item: AIContextItem;

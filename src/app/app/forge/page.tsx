@@ -1,4 +1,3 @@
-
 import { OverviewSidebar } from '@/components/os/OverviewSidebar';
 import { ForgeHeader } from '@/components/os/forge/ForgeHeader';
 import { ForgeSubNav, type ForgeTab } from '@/components/os/forge/ForgeSubNav';
@@ -10,10 +9,10 @@ import {
   forgeNodesRegistry,
   forgeRecordsRegistry,
 } from '@/data/os/forge';
-import { aiRunsRegistry } from '@/data/os/aiRuns';
+import { aiRunsRegistry } from '@/data/os/ai/aiRuns';
 
-import { aiCoreContextRegistry } from '@/data/os/aiCore';
-import { aiDecisionsRegistry } from '@/components/os/ai/aiDecisions';
+import { aiCoreContextRegistry } from '@/data/os/ai/aiCore';
+import { aiDecisionsRegistry } from '@/data/os/ai/aiDecisions';
 
 interface ForgePageProps {
   searchParams?: Promise<{
@@ -38,13 +37,11 @@ export default async function ForgePage({ searchParams }: ForgePageProps) {
 
         <main className="flex-1 p-6 space-y-6 overflow-x-hidden">
           <section className="space-y-1.5 border-b border-[var(--border)] pb-5 font-mono">
-            <div className="text-[10px] tracking-widest text-[var(--muted)] uppercase flex items-center gap-2">
-              <span className="text-[var(--primary)]">FORGE.01</span>
-              <span>//</span>
-              <span>EXECUTION_FOUNDATION_LAYER</span>
+            <div className="text-[10px] tracking-widest text-[var(--muted)] uppercase">
+              EXECUTION LAYER
             </div>
             <h1 className="text-xl font-bold tracking-tight text-[var(--foreground)] uppercase">
-              Forge Execution Environment
+              Forge
             </h1>
             <p className="text-xs text-[var(--muted)] max-w-2xl">
               Execution boundary layer. Represents task reception, node targeting, and execution lifecycle records from upstream AI Core decisions.

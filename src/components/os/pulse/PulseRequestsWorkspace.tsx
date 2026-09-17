@@ -6,7 +6,7 @@ import { PulseRequest } from '@/data/os/pulse';
 import { ExecutionTask } from '@/data/os/forge';
 import { PulseRequestRow } from './PulseRequestRow';
 import { PulseRequestInspector } from './PulseRequestInspector';
-import { AIDecision } from '../ai/aiDecisions';
+import { AIDecision } from '@/data/os/ai/aiDecisions';
 
 interface PulseRequestsWorkspaceProps {
   requests: PulseRequest[];
@@ -25,8 +25,9 @@ export const PulseRequestsWorkspace: React.FC<PulseRequestsWorkspaceProps> = ({
 
   if (requests.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center p-12 font-mono text-xs text-[var(--muted)]">
-        NO PULSE REQUESTS FOUND IN REGISTRY
+      <div className="flex flex-1 items-center justify-center p-12 font-mono text-xs text-[var(--muted)] flex-col space-y-1 text-center">
+        <div>No requests yet.</div>
+        <div className="text-[10px] opacity-75">Communication requests will appear here when they enter the Pulse workflow.</div>
       </div>
     );
   }

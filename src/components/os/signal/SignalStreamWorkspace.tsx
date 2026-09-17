@@ -49,7 +49,7 @@ export const SignalStreamWorkspace: React.FC<SignalStreamWorkspaceProps> = ({
     });
   }, [observations, sourceMap, selectedSourceFilter, searchQuery]);
 
-  // Fix #1: Keep inspector selection aligned with active stream view
+  // Keep inspector selection aligned with active stream view
   useEffect(() => {
     if (filteredObservations.length > 0) {
       const isSelectedInFiltered = filteredObservations.some(
@@ -138,14 +138,19 @@ export const SignalStreamWorkspace: React.FC<SignalStreamWorkspaceProps> = ({
               <span>UTC LOG</span>
             </div>
 
-            {filteredObservations.length > 0 ? (
+            {observations.length === 0 ? (
+              <div className="p-8 font-mono text-xs text-[var(--muted)] text-center space-y-1">
+                <div>No observations yet.</div>
+                <div className="text-[10px] opacity-75">Signal has not received any observations.</div>
+              </div>
+            ) : filteredObservations.length > 0 ? (
               filteredObservations.map((obs) => {
                 const source = sourceMap.get(obs.sourceId);
                 return (
                   <ObservationStreamRow
                     key={obs.id}
                     observation={obs}
-                    sourceCode={source?.code || 'IN.XX'}
+                    sourceCode={source?.code || 'UNKNOWN SOURCE'}
                     isSelected={obs.id === selectedObservation?.id}
                     onSelect={() => setSelectedObsId(obs.id)}
                   />
@@ -158,7 +163,7 @@ export const SignalStreamWorkspace: React.FC<SignalStreamWorkspaceProps> = ({
             )}
           </div>
 
-          {/* Fix #2: Accurate mode status */}
+          {/* Accurate mode status */}
           <div className="px-4 py-2 font-mono text-[10px] text-[var(--muted)] bg-[var(--surface)]/20 border-t border-[var(--border)]/40 flex justify-between">
             <span>STREAM_STATE: SYNCHRONIZED</span>
             <span>STREAM_MODE: STATIC</span>

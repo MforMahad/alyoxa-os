@@ -11,13 +11,13 @@ describe('Cross-Module Loop Verification (Phase 13.7.3)', () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it('2. SIGNAL OBS-001 → AI DEC-001 is verified', () => {
+  it('2. SIGNAL obs_89412a → AI DEC-001 is verified', () => {
     const result = verifyCrossModuleLoop();
     const link001 = result.verifiedReferences.find((r) => r.linkId === 'CMR-001');
     expect(link001).toBeDefined();
     expect(link001?.verified).toBe(true);
     expect(link001?.sourceModule).toBe('SIGNAL');
-    expect(link001?.sourceRecordId).toBe('OBS-001');
+    expect(link001?.sourceRecordId).toBe('obs_89412a');
     expect(link001?.targetModule).toBe('AI');
     expect(link001?.targetRecordId).toBe('DEC-001');
   });
@@ -44,13 +44,13 @@ describe('Cross-Module Loop Verification (Phase 13.7.3)', () => {
     expect(link005?.targetRecordId).toBe('REQ-001');
   });
 
-  it('5. SIGNAL INS-001 → PULSE REQ-001 is verified', () => {
+  it('5. SIGNAL ins_7721 → PULSE REQ-001 is verified', () => {
     const result = verifyCrossModuleLoop();
     const link004 = result.verifiedReferences.find((r) => r.linkId === 'CMR-004');
     expect(link004).toBeDefined();
     expect(link004?.verified).toBe(true);
     expect(link004?.sourceModule).toBe('SIGNAL');
-    expect(link004?.sourceRecordId).toBe('INS-001');
+    expect(link004?.sourceRecordId).toBe('ins_7721');
     expect(link004?.targetModule).toBe('PULSE');
     expect(link004?.targetRecordId).toBe('REQ-001');
   });
@@ -90,9 +90,9 @@ describe('Cross-Module Loop Verification (Phase 13.7.3)', () => {
         sourceModule: 'SIGNAL',
         sourceRecordType: 'observation',
         targetModule: 'AI',
-        targetRecordType: 'Decision',
+        targetRecordType: 'decision',
         crossModuleRefId: 'CMR-001',
-        requiredReferences: ['OBS-001'],
+        requiredReferences: ['obs_89412a'],
       } as unknown as OSIntegrationContract),
     };
     const result = verifyCrossModuleLoop(mockRegs);

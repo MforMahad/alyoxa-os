@@ -2,7 +2,7 @@ import React from 'react';
 import { PulseApproval, PulseRequest } from '@/data/os/pulse';
 
 import { ExecutionTask } from '@/data/os/forge';
-import { AIDecision } from '../ai/aiDecisions';
+import { AIDecision } from '../../../data/os/ai/aiDecisions';
 
 interface PulseApprovalInspectorProps {
   approval: PulseApproval;

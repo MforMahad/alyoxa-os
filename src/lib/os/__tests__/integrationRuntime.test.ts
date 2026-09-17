@@ -33,7 +33,7 @@ export function runOSIntegrationRuntimeVerification(): boolean {
     osEventsRegistry.map((evt) => [evt.id, evt]),
   );
 
-  // 1. EVT-001: SIGNAL OBS-001 observation created
+  // 1. EVT-001: SIGNAL obs_89412a observation created
   //    -> CONTRACT-001 -> AI
   const evt1 = eventMap.get("EVT-001");
 
@@ -60,7 +60,7 @@ export function runOSIntegrationRuntimeVerification(): boolean {
     }
   }
 
-  // 2. EVT-002: SIGNAL INS-001 insight created
+  // 2. EVT-002: SIGNAL ins_7721 insight created
   //    -> CONTRACT-004 -> PULSE
   const evt2 = eventMap.get("EVT-002");
 
@@ -112,8 +112,8 @@ export function runOSIntegrationRuntimeVerification(): boolean {
     }
   }
 
-  // 4. EVT-004: AI RUN-001 run started
-  //    -> NO MATCH (not_found)
+  // 4. EVT-004: AI DEC-001 decision updated
+  //    -> CONTRACT-002 -> FORGE
   const evt4 = eventMap.get("EVT-004");
 
   if (!evt4) {
@@ -125,11 +125,15 @@ export function runOSIntegrationRuntimeVerification(): boolean {
     const res = runtime.resolveEventAndPrepare(evt4);
 
     if (
-      res.status !== "not_found" ||
-      res.handoffs.length !== 0
+      res.status !== "matched" ||
+      res.handoffs.length !== 1 ||
+      res.handoffs[0].contractId !== "CONTRACT-002" ||
+      res.handoffs[0].targetModule !== "FORGE" ||
+      res.handoffs[0].status !== "HANDOFF_PREPARED" ||
+      res.handoffs[0].metadata.resolvedFromEventId !== "EVT-004"
     ) {
       console.error(
-        "FAIL: EVT-004 unexpectedly matched a contract.",
+        "FAIL: EVT-004 failed to resolve CONTRACT-002.",
       );
       passed = false;
     }
@@ -189,7 +193,7 @@ export function runOSIntegrationRuntimeVerification(): boolean {
     ...unknownEvt,
     module:
       "INVALID_MODULE" as unknown as OSEvent["module"],
-    recordId: "OBS-001",
+    recordId: "obs_89412a",
   };
 
   const resInvalidMod =
@@ -211,7 +215,7 @@ export function runOSIntegrationRuntimeVerification(): boolean {
   const badActionEvt: OSEvent = {
     ...unknownEvt,
     module: "SIGNAL",
-    recordId: "OBS-001",
+    recordId: "obs_89412a",
     action:
       "NON_CANONICAL_ACTION" as OSEventAction,
   };
@@ -241,10 +245,11 @@ export function runOSIntegrationRuntimeVerification(): boolean {
     sourceModule: "SIGNAL",
     targetModule: "AI",
     sourceRecordType: "observation",
-    targetRecordType: "Decision",
+    targetRecordType: "decision",
     purpose: "Test invalid ref",
     crossModuleRefId: "REF-999",
-    requiredReferences: ["OBS-001"],
+    requiredReferences: ["obs_89412a"],
+    createdAt: "2026-01-01T00:00:00Z",
     metadata: {},
   };
 

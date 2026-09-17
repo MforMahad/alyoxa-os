@@ -1,9 +1,9 @@
 import React from 'react';
 import { ExecutionTask, ExecutionNode } from '@/data/os/forge';
-import { AIRun } from '@/data/os/aiRuns';
+import { AIRun } from '@/data/os/ai/aiRuns';
 
-import { AIContextItem } from '@/data/os/aiCore';
-import { AIDecision } from '../ai/aiDecisions';
+import { AIContextItem } from '@/data/os/ai/aiCore';
+import { AIDecision } from '../../../data/os/ai/aiDecisions';
 
 interface ExecutionTaskInspectorProps {
   task: ExecutionTask;
@@ -30,10 +30,10 @@ export const ExecutionTaskInspector: React.FC<ExecutionTaskInspectorProps> = ({
 
   const getStatusNotice = (status: string) => {
     if (status === 'received') {
-      return 'AWAITING AUTHORIZATION: Task has been received by Forge but execution is blocked by the human approval boundary.';
+      return 'Task has been received by Forge. Execution has not started.';
     }
     if (status === 'queued') {
-      return 'QUEUED FOR EXECUTION: Task has entered the Forge queue. No external executor is currently attached to this node.';
+      return 'Task is marked queued in the current Forge state. No execution runtime is currently attached.';
     }
     return `Status: ${status}`;
   };

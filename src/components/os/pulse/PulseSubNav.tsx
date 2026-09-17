@@ -28,7 +28,7 @@ export const PulseSubNav: React.FC<PulseSubNavProps> = ({ activeTab, counts }) =
         return (
           <Link
             key={tab.id}
-            href={`/pulse?tab=${tab.id}`}
+            href={`/app/pulse?tab=${tab.id}`}
             className={`border-b-2 px-4 py-3 font-medium transition-colors ${
               isActive
                 ? 'border-[var(--primary)] text-[var(--foreground)]'
