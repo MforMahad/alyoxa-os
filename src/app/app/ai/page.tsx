@@ -5,7 +5,11 @@ import { AIContextWorkspace } from '@/components/os/ai/AIContextWorkspace';
 import { AIDecisionsWorkspace } from '@/components/os/ai/AIDecisionsWorkspace';
 
 import { AIWorkspacePlaceholder } from '@/components/os/ai/AIWorkspacePlaceholder';
-import { aiCoreContextRegistry } from '@/data/os/ai/aiCore';
+import {
+  aiCoreContextRegistry,
+  buildPersistedSignalObservationContexts,
+} from '@/data/os/ai/aiCore';
+import { listWorkspaceObservations } from '@/actions/signal/listWorkspaceObservations';
 
 import { aiRunsRegistry } from '@/data/os/ai/aiRuns';
 import { aiDecisionsRegistry } from '@/data/os/ai/aiDecisions';
@@ -18,6 +22,16 @@ interface AIPageProps {
 }
 
 export default async function AIPage({ searchParams }: AIPageProps) {
+  const persistedObservationsResult = await listWorkspaceObservations();
+  const persistedObservationContexts = persistedObservationsResult.success
+    ? buildPersistedSignalObservationContexts(persistedObservationsResult.data)
+    : [];
+  const aiContexts = [...aiCoreContextRegistry, ...persistedObservationContexts];
+
+  if (!persistedObservationsResult.success) {
+    console.error('[AIPage] Persisted Signal observations were unavailable.');
+  }
+
   const resolvedParams = await searchParams;
   const rawTab = resolvedParams?.tab;
 
@@ -52,17 +66,17 @@ export default async function AIPage({ searchParams }: AIPageProps) {
           {/* Active Stage */}
           <section>
             {activeTab === 'context' ? (
-              <AIContextWorkspace items={aiCoreContextRegistry} />
+              <AIContextWorkspace items={aiContexts} />
             ) : activeTab === 'decisions' ? (
               <AIDecisionsWorkspace
                 decisions={aiDecisionsRegistry}
-                contexts={aiCoreContextRegistry}
+                contexts={aiContexts}
               />
             ) : activeTab === 'runs' ? (
               <AIRunsWorkspace
                 runs={aiRunsRegistry}
                 decisions={aiDecisionsRegistry}
-                contexts={aiCoreContextRegistry}
+                contexts={aiContexts}
               />
             ) : (
               <AIWorkspacePlaceholder tab={activeTab} />

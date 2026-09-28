@@ -51,6 +51,21 @@ export interface Observation {
   attentionState: AttentionState;
 }
 
+export interface PersistedSignalObservation {
+  id: string;
+  public_id: string;
+  source_id: string;
+  website_scan_id: string | null;
+  source_event_id: string | null;
+  severity: string;
+  category: string;
+  title: string;
+  description: string;
+  metadata: unknown | null;
+  observed_at: string;
+  created_at: string;
+}
+
 /**
  * 3. Pattern / Anomaly
  * A cluster of related observations identified within a correlation window.

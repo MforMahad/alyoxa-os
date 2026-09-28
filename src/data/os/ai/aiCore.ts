@@ -5,12 +5,14 @@ import {
     Observation,
     Pattern,
     Insight,
+    PersistedSignalObservation,
   } from '@/data/os/signal';
   
   export type ContextCategory =
     | 'SIGNAL_OBSERVATION'
     | 'SIGNAL_PATTERN'
     | 'SIGNAL_INSIGHT'
+    | 'PERSISTED_SIGNAL_OBSERVATION'
     | 'SYSTEM_STATE';
   
   export type ContextRelevance = 'high' | 'medium' | 'low';
@@ -24,6 +26,48 @@ import {
     relevance: ContextRelevance;
     payload: Record<string, unknown>;
     refId?: string;
+  }
+
+  export interface PersistedSignalObservationContext extends AIContextItem {
+    type: 'PERSISTED_SIGNAL_OBSERVATION';
+    refId: string;
+    payload: {
+      category: string;
+      title: string;
+      description: string;
+      severity: string;
+      metadata: unknown | null;
+      source_id: string;
+      website_scan_id: string | null;
+    };
+  }
+
+  export function buildPersistedSignalObservationContexts(
+    observations: PersistedSignalObservation[]
+  ): PersistedSignalObservationContext[] {
+    return observations.map((observation) => ({
+      id: `CTX-PERSISTED-SIGNAL-OBS-${observation.public_id}`,
+      type: 'PERSISTED_SIGNAL_OBSERVATION',
+      sourceModule: 'SIGNAL',
+      summary: observation.description,
+      timestamp: observation.observed_at,
+      relevance:
+        observation.severity === 'critical' || observation.severity === 'high'
+          ? 'high'
+          : observation.severity === 'low'
+            ? 'low'
+            : 'medium',
+      refId: observation.public_id,
+      payload: {
+        category: observation.category,
+        title: observation.title,
+        description: observation.description,
+        severity: observation.severity,
+        metadata: observation.metadata,
+        source_id: observation.source_id,
+        website_scan_id: observation.website_scan_id,
+      },
+    }));
   }
   
   // Convert locked Signal Observations to AI Context Frames
