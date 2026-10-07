@@ -8,6 +8,13 @@ import { getLatestWebsiteScanStatus } from "@/actions/signal/getLatestWebsiteSca
 import { getWebsiteScanStatus } from "@/actions/signal/getWebsiteScanStatus";
 import { updateWorkspaceWebsite } from "@/actions/workspaces/updateWorkspaceWebsite";
 import {
+  getWebsiteSourceConnectionKey,
+  getWebsiteSourceConnectionState,
+  recordWebsiteSourceConnectionResult,
+  setWebsiteSourceConnectionPending,
+  type WebsiteSourceConnectionsByKey,
+} from "@/lib/os/signal/websiteSourceConnectionState";
+import {
   canStartWebsiteAnalysis,
   createSingleFlightRequest,
   createSingleFlightRequestByKey,
@@ -36,6 +43,8 @@ export default function WorkspaceSignalEntry() {
   const [scansByDomain, setScansByDomain] = useState<
     Record<string, TrackedWebsiteScan>
   >({});
+  const [connectionsByDomain, setConnectionsByDomain] =
+    useState<WebsiteSourceConnectionsByKey>({});
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [requestLatestStatus] = useState(() =>
@@ -70,7 +79,16 @@ export default function WorkspaceSignalEntry() {
     .sort()
     .join("|");
 
-  const isConfigured = Boolean(savedUrl);
+  const hasSavedWebsite = Boolean(savedUrl);
+  const savedDomain = normalizeWebsiteDomain(savedUrl);
+  const savedConnectionKey = getWebsiteSourceConnectionKey(
+    workspaceId,
+    savedDomain
+  );
+  const websiteConnection = getWebsiteSourceConnectionState(
+    connectionsByDomain,
+    savedConnectionKey
+  );
   const websiteWasEdited = websiteUrl.trim() !== savedUrl.trim();
   const websiteLabel = useMemo(() => {
     if (!savedUrl) return "No source connected";
@@ -340,22 +358,41 @@ export default function WorkspaceSignalEntry() {
       setSavedUrl(updateResult.data.website_url);
       setMessage("Website saved. Starting analysis...");
 
+      const resultDomain = normalizeWebsiteDomain(
+        updateResult.data.website_url
+      );
+      const connectionKey = getWebsiteSourceConnectionKey(
+        workspace.id,
+        resultDomain
+      );
+      setConnectionsByDomain((current) =>
+        setWebsiteSourceConnectionPending(current, connectionKey)
+      );
+
       const connectResult = await connectWebsiteSource({
         workspaceId: workspace.id,
       });
       if (!connectResult.success) {
+        setConnectionsByDomain((current) =>
+          recordWebsiteSourceConnectionResult(
+            current,
+            connectionKey,
+            connectResult
+          )
+        );
         setError(connectResult.error);
         setMessage("");
         return;
       }
 
-      const resultDomain = normalizeWebsiteDomain(
-        updateResult.data.website_url
-      );
       if (!resultDomain) {
         setError("The saved website URL could not be resolved.");
         return;
       }
+
+      setConnectionsByDomain((current) =>
+        recordWebsiteSourceConnectionResult(current, connectionKey, connectResult)
+      );
 
       const currentScan = {
         id: connectResult.data.scan.id,
@@ -447,7 +484,7 @@ export default function WorkspaceSignalEntry() {
     ? "VIEW AI ANALYSIS ↗"
     : signalStatus === "failed"
     ? "TRY AGAIN ↗"
-    : websiteWasEdited || !isConfigured
+    : websiteWasEdited || !hasSavedWebsite
     ? "ANALYZE WEBSITE ↗"
     : "UPDATE ↗";
 
@@ -490,10 +527,12 @@ export default function WorkspaceSignalEntry() {
             <div className="flex items-center gap-2 font-mono text-[9px] tracking-[0.12em] uppercase">
               <span
                 className={`h-1.5 w-1.5 ${
-                  isConfigured ? "bg-[var(--primary)]" : "bg-[var(--muted)]"
+                  hasSavedWebsite ? "bg-[var(--primary)]" : "bg-[var(--muted)]"
                 }`}
               />
-              {isConfigured ? "Connected" : "Not connected"}
+              {websiteConnection.status === "connected"
+                ? "Connected"
+                : "Not connected"}
             </div>
           </div>
 
@@ -614,7 +653,7 @@ export default function WorkspaceSignalEntry() {
                 Source
               </div>
               <div className="mt-2 truncate font-mono text-xs font-bold uppercase">
-                {isConfigured ? websiteLabel : "Website"}
+                {hasSavedWebsite ? websiteLabel : "Website"}
               </div>
             </div>
             <div className="border border-[var(--border)] p-4">
