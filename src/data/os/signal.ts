@@ -8,7 +8,7 @@
 // A. DOMAIN CONTRACTS / TYPES
 // ============================================================================
 
-export type FeedSourceType = 'webhook' | 'telemetry' | 'api_poll' | 'system_log';
+export type FeedSourceType = 'webhook' | 'telemetry' | 'api_poll' | 'system_log' | 'website';
 export type FeedSourceStatus = 'active' | 'degraded' | 'offline';
 export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
 export type AttentionState = 'pass_through' | 'autonomous_action' | 'human_review_required';
@@ -49,6 +49,19 @@ export interface Observation {
     sessionId?: string;
   };
   attentionState: AttentionState;
+}
+
+export interface PersistedSignalFeedSource {
+  id: string;
+  public_id: string;
+  source_type: string;
+  name: string;
+  source_key: string | null;
+  status: string;
+  description: string | null;
+  metadata: unknown | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PersistedSignalObservation {

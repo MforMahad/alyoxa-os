@@ -44,7 +44,7 @@ export default async function SignalPage({ searchParams }: SignalPageProps) {
           <section className="space-y-1.5 border-b `border-[var(--border)]` pb-5">
             <div className="text-[10px] font-mono tracking-widest text-[var(--muted)] uppercase flex items-center gap-2">
               <span className="`text-[var(--signal)]`">IN.00-IN.04</span>
-              <span>//</span>
+              <span>{'//'}</span>
               <span>INTELLIGENCE_OBSERVATION_LAYER</span>
             </div>
             <h1 className="text-xl font-bold tracking-tight `text-[var(--foreground)]` uppercase font-mono">

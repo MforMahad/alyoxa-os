@@ -3,24 +3,43 @@ export interface QueuedWebsiteScan {
   created_at: string
 }
 
-interface QueueQueryResult {
+interface QueueSelectResult {
   data: QueuedWebsiteScan | null
   error: { code?: string } | null
 }
 
-interface QueueQuery {
-  eq(column: 'status', value: 'queued'): QueueQuery
+interface QueueSelectQuery {
+  eq(column: 'status', value: 'queued'): QueueSelectQuery
   order(
     column: 'created_at',
     options: { ascending: true }
-  ): QueueQuery
-  limit(count: 1): QueueQuery
-  maybeSingle(): Promise<QueueQueryResult>
+  ): QueueSelectQuery
+  limit(count: 1): QueueSelectQuery
+  maybeSingle(): Promise<QueueSelectResult>
+}
+
+export interface WebsiteScanDispatchFailureUpdate {
+  status: 'failed'
+  completed_at: string
+  error_message: string
+}
+
+interface QueueUpdateResult {
+  data: { id: string } | null
+  error: { code?: string } | null
+}
+
+interface QueueUpdateQuery {
+  eq(column: 'id' | 'status', value: string): QueueUpdateQuery
+  select(columns: 'id'): {
+    maybeSingle(): Promise<QueueUpdateResult>
+  }
 }
 
 export interface WebsiteScanQueueClient {
   from(table: 'website_scans'): {
-    select(columns: 'id, created_at'): QueueQuery
+    select(columns: 'id, created_at'): QueueSelectQuery
+    update(values: WebsiteScanDispatchFailureUpdate): QueueUpdateQuery
   }
 }
 
@@ -41,6 +60,8 @@ interface DispatchOldestQueuedWebsiteScanOptions {
   triggerSecret: string
   fetchImpl?: DispatchFetch
 }
+
+const DISPATCH_FAILURE_MESSAGE_MAX_LENGTH = 1000
 
 export async function dispatchOldestQueuedWebsiteScan({
   queueClient,
@@ -74,10 +95,66 @@ export async function dispatchOldestQueuedWebsiteScan({
       headers: { authorization: `Bearer ${triggerSecret}` },
     })
 
-    return response.ok
-      ? { status: 'dispatched', scanId: scan.id, httpStatus: response.status }
-      : { status: 'dispatch_failed', scanId: scan.id, httpStatus: response.status }
+    if (response.ok) {
+      return { status: 'dispatched', scanId: scan.id, httpStatus: response.status }
+    }
+
+    // The dispatch genuinely reached the endpoint and was rejected/failed.
+    // Leaving the scan `queued` would make it the permanent head of the
+    // queue, blocking every scan behind it on every future run. Transition
+    // it out of `queued` so the next run can move on, and record why.
+    await markQueuedScanFailed(
+      queueClient,
+      scan.id,
+      `Website scan dispatch failed with HTTP ${response.status}.`
+    )
+
+    return { status: 'dispatch_failed', scanId: scan.id, httpStatus: response.status }
   } catch {
+    // The dispatch attempt itself failed (network error, timeout, etc.)
+    // before a response was ever received. Same head-of-line reasoning
+    // applies: this scan must not block the queue forever.
+    await markQueuedScanFailed(
+      queueClient,
+      scan.id,
+      'Website scan dispatch request failed before reaching the scan processor.'
+    )
+
     return { status: 'dispatch_failed', scanId: scan.id }
+  }
+}
+
+async function markQueuedScanFailed(
+  queueClient: WebsiteScanQueueClient,
+  scanId: string,
+  message: string
+): Promise<void> {
+  try {
+    // Conditioned on status = 'queued' (same optimistic-concurrency
+    // pattern as the processor's claim/complete/fail updates) so this
+    // can never overwrite a scan that was claimed, completed, or already
+    // failed by the processor in the meantime.
+    const { error } = await queueClient
+      .from('website_scans')
+      .update({
+        status: 'failed',
+        completed_at: new Date().toISOString(),
+        error_message: message.slice(0, DISPATCH_FAILURE_MESSAGE_MAX_LENGTH),
+      })
+      .eq('id', scanId)
+      .eq('status', 'queued')
+      .select('id')
+      .maybeSingle()
+
+    if (error) {
+      console.error('[WebsiteScanDispatcher] Failed marking scan as failed after dispatch failure.', {
+        scanId,
+        code: error.code,
+      })
+    }
+  } catch {
+    console.error('[WebsiteScanDispatcher] Failed marking scan as failed after dispatch failure.', {
+      scanId,
+    })
   }
 }

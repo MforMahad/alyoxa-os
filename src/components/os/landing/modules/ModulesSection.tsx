@@ -68,7 +68,7 @@ export default function ModulesSection() {
 
           <div className="lg:col-span-4 flex flex-col justify-start lg:pl-8 lg:border-l lg:border-[var(--border)] space-y-6 pt-2">
             <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[var(--muted)] block">
-              // ARCHITECTURAL CONTINUITY
+              {'// ARCHITECTURAL CONTINUITY'}
             </span>
             <p className="text-xs sm:text-sm font-mono text-[var(--muted)] leading-relaxed">
               ALYOXA OS brings observation, intelligence, execution, communication, and memory into one continuous operating environment.

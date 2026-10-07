@@ -91,7 +91,7 @@ export default function EditorialNav() {
             
             <div className="lg:col-span-5 space-y-6">
               <div className="font-mono text-[11px] tracking-[0.25em] uppercase text-[var(--primary)] font-semibold">
-                // UNIFIED BUSINESS SYSTEM
+                {'// UNIFIED BUSINESS SYSTEM'}
               </div>
               <h2 className="text-4xl sm:text-6xl font-light tracking-tight leading-[1.0] text-[var(--foreground)]">
                 SYSTEM <br />
@@ -104,7 +104,7 @@ export default function EditorialNav() {
 
             <div className="lg:col-span-7 flex flex-col space-y-3 lg:border-l lg:border-[var(--border)] lg:pl-16">
               <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-[var(--muted)] mb-4">
-                // SYSTEM MODULES [01 — 04]
+                {'// SYSTEM MODULES [01 — 04]'}
               </div>
               {navItems.map((item) => (
                 <a
@@ -136,7 +136,7 @@ export default function EditorialNav() {
           {/* Footer Bar inside Fullscreen — Cleaned of Fake Coordinates */}
           <div className="max-w-7xl hidden sm:flex mx-auto w-full flex-col sm:flex-row justify-between items-start sm:items-center text-[10px] font-mono tracking-[0.2em] uppercase text-[var(--muted)] pt-8 border-t border-[var(--border)] gap-4">
             <span>ALYOXA OS</span>
-            <span>// UNIFIED BUSINESS SYSTEM</span>
+            <span>{'// UNIFIED BUSINESS SYSTEM'}</span>
             <span>INDEX 04 / 04</span>
           </div>
 

@@ -100,7 +100,7 @@ export function run13_6_5_ObservabilityValidatorTests(): boolean {
   // --- 2. Invalid Stage ---
   const invalidStageObs: OSIntegrationObservation = {
     ...validObservations[0],
-    stage: 'INVALID_STAGE' as any,
+    stage: 'INVALID_STAGE' as unknown as OSIntegrationObservation['stage'],
   };
   const resStage = osObservabilityValidator.validateObservation(invalidStageObs);
   if (resStage.valid || !resStage.errors.some((e) => e.includes('Invalid observation stage'))) {
@@ -110,7 +110,7 @@ export function run13_6_5_ObservabilityValidatorTests(): boolean {
   // --- 3. Invalid Status ---
   const invalidStatusObs: OSIntegrationObservation = {
     ...validObservations[0],
-    status: 'unknown' as any,
+    status: 'unknown' as unknown as OSIntegrationObservation['status'],
   };
   const resStatus = osObservabilityValidator.validateObservation(invalidStatusObs);
   if (resStatus.valid || !resStatus.errors.some((e) => e.includes('Invalid observation status'))) {

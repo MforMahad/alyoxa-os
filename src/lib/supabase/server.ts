@@ -11,12 +11,11 @@ function getRequiredEnv(name: string): string {
   return value
 }
 
-const supabaseUrl = getRequiredEnv('NEXT_PUBLIC_SUPABASE_URL')
-const supabasePublishableKey = getRequiredEnv(
-  'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'
-)
-
 export async function createClient() {
+  const supabaseUrl = getRequiredEnv('NEXT_PUBLIC_SUPABASE_URL')
+  const supabasePublishableKey = getRequiredEnv(
+    'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'
+  )
   const cookieStore = await cookies()
 
   return createServerClient(supabaseUrl, supabasePublishableKey, {

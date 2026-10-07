@@ -40,9 +40,13 @@ export const metadata: Metadata = {
   description: "The intelligent operating system for modern businesses.",
 };
 
+interface RootLayoutProps {
+  children: React.ReactNode;
+}
+
 export default function RootLayout({
   children,
-}: LayoutProps<"/">) {
+}: RootLayoutProps) {
   return (
     <html lang="en" className={`${satoshi.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">

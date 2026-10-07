@@ -13,7 +13,6 @@ import {
   CrossModuleReference,
 } from "../crossModuleReferences";
 import {
-  SharedContextEntry,
   sharedContextStore,
   SharedContextStore,
 } from "../sharedContext";

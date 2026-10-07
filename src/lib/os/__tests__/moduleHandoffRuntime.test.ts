@@ -14,7 +14,6 @@ import {
   OSEvent,
 } from "../../../data/os/events";
 import {
-  crossModuleReferencesRegistry,
   CrossModuleReference,
 } from "../crossModuleReferences";
 

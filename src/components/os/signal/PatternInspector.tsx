@@ -116,7 +116,7 @@ export const PatternInspector: React.FC<PatternInspectorProps> = ({
               <div>
                 <div className="font-bold text-[var(--foreground)]">{source.name}</div>
                 <div className="text-[10px] text-[var(--muted)]">
-                  {source.code} // {source.type}
+                  {source.code}{' // '}{source.type}
                 </div>
               </div>
               <span className="text-[9px] px-1.5 py-0.5 border border-[var(--signal)]/30 text-[var(--signal)] bg-[var(--signal)]/10 uppercase">

@@ -37,7 +37,7 @@ export default function ThesisSection() {
             {/* Architectural Premise Elaboration */}
             <div className="lg:col-span-4 flex flex-col justify-start lg:pl-8 lg:border-l lg:border-[var(--border)] space-y-6 pt-2">
               <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[var(--muted)] block">
-                // ARCHITECTURAL PREMISE
+                {'// ARCHITECTURAL PREMISE'}
               </span>
               <p className="text-sm sm:text-base text-[var(--muted)] font-normal leading-relaxed tracking-wide">
                 ALYOXA OS connects intelligence, execution, communication, and memory into one operating environment — so the organization can move as one system.
@@ -50,7 +50,7 @@ export default function ThesisSection() {
           <div className="pt-12 sm:pt-14 border-t border-[var(--border)]">
             
             <div className="font-mono text-[10px] tracking-[0.25em] uppercase text-[var(--muted)] mb-10">
-              // STRUCTURAL EVOLUTION
+              {'// STRUCTURAL EVOLUTION'}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-16 lg:gap-24">

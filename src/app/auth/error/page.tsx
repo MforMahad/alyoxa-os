@@ -15,7 +15,7 @@ export default function AuthErrorPage() {
         {/* Left Column: System Status */}
         <div className="md:col-span-4 space-y-3 border-l border-[var(--border)] pl-4">
           <div className="font-mono text-[9px] tracking-[0.14em] uppercase text-[var(--muted)]">
-            // STATUS
+            {'// STATUS'}
           </div>
           <div className="text-sm font-medium tracking-tight text-[var(--primary)]">
             VERIFICATION UNAVAILABLE

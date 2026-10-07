@@ -70,7 +70,7 @@ export default function OperatingLoopSection() {
 
           <div className="lg:col-span-4 flex flex-col justify-start lg:pl-8 lg:border-l lg:border-[var(--border)] space-y-6 pt-2">
             <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[var(--muted)] block">
-              // ARCHITECTURAL PREMISE
+              {'// ARCHITECTURAL PREMISE'}
             </span>
             <p className="text-sm sm:text-base text-[var(--muted)] font-normal leading-relaxed tracking-wide">
               ALYOXA OS keeps context moving through the organization. Memory loops back into observation, ensuring every action builds upon the last.
@@ -90,7 +90,7 @@ export default function OperatingLoopSection() {
         <div className="pt-6 border-t border-[var(--border)]">
           
           <div className="font-mono text-[10px] tracking-[0.25em] uppercase text-[var(--muted)] mb-12">
-            // CANONICAL SEQUENCE &amp; SYSTEM LAYERS
+            {'// CANONICAL SEQUENCE & SYSTEM LAYERS'}
           </div>
 
           {/* 5-Column Editorial Grid for Desktop, 2-Column for Tablet, 1-Column for Mobile */}

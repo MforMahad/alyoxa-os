@@ -12,24 +12,8 @@ import {
 
 import { createClient } from '@/lib/supabase/client'
 
-function getRequiredEnv(
-  value: string | undefined,
-  name: string
-): string {
-  if (!value) {
-    throw new Error(`Missing environment variable: ${name}`)
-  }
-
-  return value
-}
-
-const siteKey = getRequiredEnv(
-  process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-  'NEXT_PUBLIC_TURNSTILE_SITE_KEY'
-)
-
 export default function SignupPage() {
-  const supabase = createClient()
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
   const turnstileRef = useRef<TurnstileInstance>(null)
 
   const [email, setEmail] = useState('')
@@ -109,6 +93,8 @@ export default function SignupPage() {
     setIsLoading(true)
 
     try {
+      const supabase = createClient()
+
       const { error: authError } =
         await supabase.auth.signUp({
           email: emailValue,
@@ -142,10 +128,14 @@ export default function SignupPage() {
       setEmail(emailValue)
 
       setIsSuccess(true)
-    } catch {
-      setError(
-        'An unexpected error occurred. Please try again.'
-      )
+    } catch (error) {
+      const missingConfiguration =
+        error instanceof Error &&
+        error.message.startsWith('Missing environment variable:')
+
+      setError(missingConfiguration
+        ? error.message
+        : 'An unexpected error occurred. Please try again.')
 
       setIsLoading(false)
       setCaptchaToken(null)
@@ -445,26 +435,32 @@ export default function SignupPage() {
 
             {/* Turnstile */}
             <div className="py-1">
-              <Turnstile
-                ref={turnstileRef}
-                siteKey={siteKey}
-                onSuccess={(token) => {
-                  setCaptchaToken(token)
-                  setError(null)
-                }}
-                onError={() => {
-                  setCaptchaToken(null)
-                  setError(
-                    'Security verification failed. Please try again.'
-                  )
-                }}
-                onExpire={() => {
-                  setCaptchaToken(null)
-                  setError(
-                    'Security verification expired. Please complete the CAPTCHA again.'
-                  )
-                }}
-              />
+              {siteKey ? (
+                <Turnstile
+                  ref={turnstileRef}
+                  siteKey={siteKey}
+                  onSuccess={(token) => {
+                    setCaptchaToken(token)
+                    setError(null)
+                  }}
+                  onError={() => {
+                    setCaptchaToken(null)
+                    setError(
+                      'Security verification failed. Please try again.'
+                    )
+                  }}
+                  onExpire={() => {
+                    setCaptchaToken(null)
+                    setError(
+                      'Security verification expired. Please complete the CAPTCHA again.'
+                    )
+                  }}
+                />
+              ) : (
+                <p role="alert" className="text-xs text-[var(--muted)]">
+                  Security verification is not configured. Please try again later.
+                </p>
+              )}
             </div>
 
             {/* Submit */}

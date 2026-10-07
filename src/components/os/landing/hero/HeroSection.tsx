@@ -24,7 +24,7 @@ export default function HeroSection() {
       {/* Top Editorial Metadata Bar */}
       <div className="hidden sm:flex w-full flex-col sm:flex-row justify-between items-start sm:items-center text-[9px] sm:text-[10px] font-mono tracking-[0.2em] sm:tracking-[0.25em] uppercase text-[var(--muted)] pb-6 sm:pb-8 border-b border-[var(--border)] gap-2 sm:gap-4 relative z-10">
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-          <span>// ALYOXA OS — ARCHITECTURAL MANIFESTO</span>
+          <span>{'// ALYOXA OS — ARCHITECTURAL MANIFESTO'}</span>
           <span className="hidden md:inline-block text-[var(--border)]">|</span>
           <span className="hidden md:inline-block">UNIFIED BUSINESS SYSTEM</span>
         </div>
@@ -68,7 +68,7 @@ export default function HeroSection() {
           
           <div className="space-y-4 sm:space-y-6">
             <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-[var(--muted)]">
-              // SYSTEM MANIFEST
+              {'// SYSTEM MANIFEST'}
             </div>
             <div className="text-xl sm:text-2xl lg:text-3xl font-light tracking-tight text-[var(--foreground)] leading-snug">
               ONE SYSTEM. <br />
@@ -78,7 +78,7 @@ export default function HeroSection() {
             {/* Interactive Layer List replacing static text */}
             <div className="pt-2 flex flex-col space-y-2">
               <p className="text-[10px] font-mono tracking-widest uppercase text-[var(--muted)] mb-1">
-                // INSPECT RUNTIME LAYERS
+                {'// INSPECT RUNTIME LAYERS'}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {layers.map((l) => (
@@ -138,7 +138,7 @@ export default function HeroSection() {
           <span>MODEL: CONTRACT-DRIVEN RUNTIME</span>
         </div>
         <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4 sm:gap-6">
-          <span>// SCROLL FOR SYSTEM SPECIFICATION</span>
+          <span>{'// SCROLL FOR SYSTEM SPECIFICATION'}</span>
           <span className="text-[var(--foreground)]">SYSTEM OVERVIEW</span>
         </div>
       </div>

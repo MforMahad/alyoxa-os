@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Observation, FeedSource } from '@/data/os/signal';
 import { ObservationStreamRow } from './ObservationStreamRow';
 import { ObservationInspector } from './ObservationInspector';
@@ -8,6 +8,32 @@ import { ObservationInspector } from './ObservationInspector';
 interface SignalStreamWorkspaceProps {
   observations: Observation[];
   sources: FeedSource[];
+}
+
+function getFilteredObservations(
+  observations: Observation[],
+  sourceMap: Map<string, FeedSource>,
+  selectedSourceFilter: string,
+  searchQuery: string
+): Observation[] {
+  return observations.filter((obs) => {
+    const source = sourceMap.get(obs.sourceId);
+    const sourceCode = source?.code || '';
+
+    if (selectedSourceFilter !== 'ALL' && sourceCode !== selectedSourceFilter) {
+      return false;
+    }
+
+    if (searchQuery.trim() !== '') {
+      const query = searchQuery.toLowerCase();
+      const matchesType = obs.eventType.toLowerCase().includes(query);
+      const matchesSummary = obs.summary.toLowerCase().includes(query);
+      const matchesCode = sourceCode.toLowerCase().includes(query);
+      return matchesType || matchesSummary || matchesCode;
+    }
+
+    return true;
+  });
 }
 
 export const SignalStreamWorkspace: React.FC<SignalStreamWorkspaceProps> = ({
@@ -26,40 +52,16 @@ export const SignalStreamWorkspace: React.FC<SignalStreamWorkspaceProps> = ({
   }, [sources]);
 
   // Filter pipeline
-  const filteredObservations = useMemo(() => {
-    return observations.filter((obs) => {
-      const source = sourceMap.get(obs.sourceId);
-      const sourceCode = source?.code || '';
-
-      // Filter by source code
-      if (selectedSourceFilter !== 'ALL' && sourceCode !== selectedSourceFilter) {
-        return false;
-      }
-
-      // Filter by query
-      if (searchQuery.trim() !== '') {
-        const q = searchQuery.toLowerCase();
-        const matchesType = obs.eventType.toLowerCase().includes(q);
-        const matchesSummary = obs.summary.toLowerCase().includes(q);
-        const matchesCode = sourceCode.toLowerCase().includes(q);
-        return matchesType || matchesSummary || matchesCode;
-      }
-
-      return true;
-    });
-  }, [observations, sourceMap, selectedSourceFilter, searchQuery]);
-
-  // Keep inspector selection aligned with active stream view
-  useEffect(() => {
-    if (filteredObservations.length > 0) {
-      const isSelectedInFiltered = filteredObservations.some(
-        (o) => o.id === selectedObsId
-      );
-      if (!isSelectedInFiltered) {
-        setSelectedObsId(filteredObservations[0].id);
-      }
-    }
-  }, [filteredObservations, selectedObsId]);
+  const filteredObservations = useMemo(
+    () =>
+      getFilteredObservations(
+        observations,
+        sourceMap,
+        selectedSourceFilter,
+        searchQuery
+      ),
+    [observations, sourceMap, selectedSourceFilter, searchQuery]
+  );
 
   // Active observation resolution
   const selectedObservation = useMemo(() => {
@@ -68,6 +70,27 @@ export const SignalStreamWorkspace: React.FC<SignalStreamWorkspaceProps> = ({
       filteredObservations[0]
     );
   }, [filteredObservations, selectedObsId]);
+
+  const updateFilters = (sourceFilter: string, query: string) => {
+    const nextFilteredObservations = getFilteredObservations(
+      observations,
+      sourceMap,
+      sourceFilter,
+      query
+    );
+
+    if (nextFilteredObservations.length > 0) {
+      const retainedSelection = nextFilteredObservations.find(
+        (observation) => observation.id === selectedObservation?.id
+      );
+      setSelectedObsId(
+        retainedSelection?.id ?? nextFilteredObservations[0].id
+      );
+    }
+
+    setSelectedSourceFilter(sourceFilter);
+    setSearchQuery(query);
+  };
 
   const selectedSource = selectedObservation
     ? sourceMap.get(selectedObservation.sourceId)
@@ -83,14 +106,14 @@ export const SignalStreamWorkspace: React.FC<SignalStreamWorkspaceProps> = ({
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => updateFilters(selectedSourceFilter, e.target.value)}
             placeholder="Filter by event type, summary, or source..."
             className="bg-transparent border-none outline-none text-[var(--foreground)] placeholder-[var(--muted)]/50 text-xs w-full font-mono"
           />
           {searchQuery && (
             <button
               type="button"
-              onClick={() => setSearchQuery('')}
+              onClick={() => updateFilters(selectedSourceFilter, '')}
               className="text-[10px] text-[var(--muted)] hover:text-[var(--foreground)] px-1"
             >
               CLEAR
@@ -102,7 +125,7 @@ export const SignalStreamWorkspace: React.FC<SignalStreamWorkspaceProps> = ({
         <div className="flex items-center gap-1 overflow-x-auto select-none">
           <button
             type="button"
-            onClick={() => setSelectedSourceFilter('ALL')}
+            onClick={() => updateFilters('ALL', searchQuery)}
             className={`px-2.5 py-1.5 text-[10px] font-mono border transition-colors ${
               selectedSourceFilter === 'ALL'
                 ? 'border-[var(--primary)] text-[var(--foreground)] bg-[var(--surface)] font-bold'
@@ -115,7 +138,7 @@ export const SignalStreamWorkspace: React.FC<SignalStreamWorkspaceProps> = ({
             <button
               type="button"
               key={src.id}
-              onClick={() => setSelectedSourceFilter(src.code)}
+              onClick={() => updateFilters(src.code, searchQuery)}
               className={`px-2.5 py-1.5 text-[10px] font-mono border transition-colors ${
                 selectedSourceFilter === src.code
                   ? 'border-[var(--primary)] text-[var(--foreground)] bg-[var(--surface)] font-bold'

@@ -406,7 +406,7 @@ export default function OSOverviewPage() {
                       <span
                         className={`${channel.accentClass} font-bold uppercase tracking-wider`}
                       >
-                        {channel.code} // {channel.name}
+                        {channel.code}{' // '}{channel.name}
                       </span>
 
                       <span className="text-[var(--border)]">→</span>

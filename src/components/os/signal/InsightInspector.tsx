@@ -121,7 +121,7 @@ export const InsightInspector: React.FC<InsightInspectorProps> = ({
               {linkedPattern.title}
             </div>
             <div className="text-[10px] text-[var(--muted)]">
-              Occurrences: {linkedPattern.count} // Severity: {linkedPattern.severity}
+              Occurrences: {linkedPattern.count}{' // Severity: '}{linkedPattern.severity}
             </div>
           </div>
         )}

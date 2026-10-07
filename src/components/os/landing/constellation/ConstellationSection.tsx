@@ -33,7 +33,7 @@ export default function ConstellationSection() {
 
           <div className="lg:col-span-4 flex flex-col justify-start lg:pl-8 lg:border-l lg:border-[var(--border)] space-y-6 pt-2">
             <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[var(--muted)] block">
-              // LAYER ARCHITECTURE
+              {'// LAYER ARCHITECTURE'}
             </span>
             <ul className="space-y-2.5 text-xs sm:text-sm font-mono text-[var(--muted)]">
               <li className="flex items-center gap-3"><span className="text-[var(--primary)]">01</span> <strong className="text-[var(--foreground)] font-normal">Signal</strong> observes.</li>
@@ -50,7 +50,7 @@ export default function ConstellationSection() {
         <div className="pt-8 border-t border-[var(--border)]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-8">
             <span className="font-mono text-[10px] tracking-[0.25em] uppercase text-[var(--muted)]">
-              // ARCHITECTURAL TOPOLOGY
+              {'// ARCHITECTURAL TOPOLOGY'}
             </span>
             <span className="font-mono text-[9px] tracking-[0.15em] uppercase text-[var(--muted)] opacity-75">
               CANONICAL ORCHESTRATION GRAPH

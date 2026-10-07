@@ -44,7 +44,7 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
     expect(() =>
       store.addContract({
         id: 'CONTRACT-999',
-        sourceModule: 'INVALID' as any,
+        sourceModule: 'INVALID' as unknown as OSIntegrationContract['sourceModule'],
         targetModule: 'AI',
         sourceRecordType: 'observation',
         targetRecordType: 'decision',
@@ -61,7 +61,7 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
       store.addContract({
         id: 'CONTRACT-999',
         sourceModule: 'SIGNAL',
-        targetModule: 'INVALID' as any,
+        targetModule: 'INVALID' as unknown as OSIntegrationContract['targetModule'],
         sourceRecordType: 'observation',
         targetRecordType: 'decision',
         purpose: 'Invalid module',
@@ -145,7 +145,7 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
         sourceRecordType: 'observation',
         targetRecordType: 'decision',
         purpose: 'Invalid requiredReferences',
-        requiredReferences: 'obs_89412a' as any,
+        requiredReferences: 'obs_89412a' as unknown as string[],
         crossModuleRefId: 'CMR-TEST',
         createdAt: '2026-08-30T13:00:00Z',
         metadata: {},
@@ -196,7 +196,7 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
         requiredReferences: ['obs_89412a'],
         crossModuleRefId: 'CMR-TEST',
         createdAt: '2026-08-30T13:00:00Z',
-        metadata: null as any,
+        metadata: null as unknown as Record<string, unknown>,
       })
     ).toThrow();
 
@@ -211,7 +211,7 @@ describe('OS Integration Contracts (Phase 12.7 Hardened)', () => {
         requiredReferences: ['obs_89412a'],
         crossModuleRefId: 'CMR-TEST',
         createdAt: '2026-08-30T13:00:00Z',
-        metadata: [] as any,
+        metadata: [] as unknown as Record<string, unknown>,
       })
     ).toThrow();
   });

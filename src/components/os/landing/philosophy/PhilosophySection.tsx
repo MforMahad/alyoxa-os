@@ -56,7 +56,7 @@ export default function PhilosophySection() {
 
           <div className="lg:col-span-4 flex flex-col justify-start lg:pl-8 lg:border-l lg:border-[var(--border)] space-y-6 pt-2">
             <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[var(--primary)] block">
-              // CORE MANIFESTO
+              {'// CORE MANIFESTO'}
             </span>
             <p className="text-xs sm:text-sm font-mono text-[var(--muted)] leading-relaxed">
               ALYOXA OS rejects isolated dashboard software. We build continuous systems where intelligence anchors every decision and execution retains memory.
@@ -68,7 +68,7 @@ export default function PhilosophySection() {
         {/* Striking Multi-Column Editorial Principle Grid (Distinct from Section 05) */}
         <div className="pt-10 border-t border-[var(--border)]">
           <div className="font-mono text-[10px] tracking-[0.25em] uppercase text-[var(--muted)] mb-10">
-            // THREE PILLARS OF OPERATION
+            {'// THREE PILLARS OF OPERATION'}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
@@ -81,7 +81,7 @@ export default function PhilosophySection() {
                 <div className="space-y-6">
                   <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
                     <span className="font-mono text-xs font-bold tracking-[0.2em] text-[var(--primary)]">
-                      {item.num} // {item.tag}
+                      {item.num}{' // '}{item.tag}
                     </span>
                     <span className=" text-[10px] text-[var(--muted)] opacity-50">
                       ALYOXA
@@ -107,7 +107,7 @@ export default function PhilosophySection() {
         {/* Editorial Closing Manifesto Summary */}
         <div className="mt-20 pt-12 border-t border-[var(--border)] max-w-4xl">
           <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[var(--primary)] block mb-3">
-            // THE CONTINUITY PROMISE
+            {'// THE CONTINUITY PROMISE'}
           </span>
           <p className="text-base sm:text-xl font-light text-[var(--foreground)] font-sans leading-relaxed">
             ALYOXA OS is built around continuity — between what an organization sees, what it understands, what it decides, what it does, and what it remembers.

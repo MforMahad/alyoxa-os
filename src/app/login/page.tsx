@@ -15,7 +15,6 @@ import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const router = useRouter()
-  const supabase = createClient()
 
   const turnstileRef = useRef<TurnstileInstance | null>(null)
 
@@ -46,6 +45,8 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
+      const supabase = createClient()
+
       /*
        * Read values directly from the submitted form.
        * This also works well with browser password managers
@@ -132,9 +133,13 @@ export default function LoginPage() {
     } catch (error) {
       console.error('ALYOXA LOGIN UNEXPECTED ERROR:', error)
 
-      setError(
-        'Something went wrong while signing you in. Please try again.'
-      )
+      const missingConfiguration =
+        error instanceof Error &&
+        error.message.startsWith('Missing environment variable:')
+
+      setError(missingConfiguration
+        ? error.message
+        : 'Something went wrong while signing you in. Please try again.')
 
       setCaptchaToken(null)
       turnstileRef.current?.reset()

@@ -37,7 +37,7 @@ export default function EnterSystemSection() {
             {/* Supporting Description */}
             <div className="space-y-4">
               <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[var(--primary)] block">
-                // CONTINUOUS ENVIRONMENT
+                {'// CONTINUOUS ENVIRONMENT'}
               </span>
               <p className="text-sm sm:text-base font-sans text-[var(--muted)] leading-relaxed">
                 ALYOXA OS brings observation, intelligence, execution, communication, and memory into one continuous operating environment.

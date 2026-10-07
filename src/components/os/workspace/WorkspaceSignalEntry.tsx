@@ -81,6 +81,29 @@ export default function WorkspaceSignalEntry() {
     }
   }, [savedUrl]);
 
+  // The website URL input is seeded from `workspace?.website_url` via
+  // useState, which only runs on this component's first mount. If the
+  // active workspace changes (switching workspaces, or a stale/previous
+  // workspace resolving before the correct one) while this component
+  // instance stays mounted, that initial value goes stale and the input
+  // keeps showing the old workspace's URL.
+  //
+  // This is intentionally NOT a useEffect: React's documented pattern
+  // for "reset/derive state when a prop changes" is to compare against
+  // the previous value during render and call setState conditionally,
+  // rather than in an effect body (which the project's
+  // react-hooks/set-state-in-effect lint rule also enforces, since an
+  // effect-based reset here would cost an extra render pass for no
+  // benefit). This does not touch `scansByDomain`, which remains keyed
+  // by domain independently of which workspace is currently active.
+  const workspaceSyncKey = `${workspace?.id ?? ""}:${workspace?.website_url ?? ""}`;
+  const [syncedWorkspaceKey, setSyncedWorkspaceKey] = useState(workspaceSyncKey);
+  if (workspaceSyncKey !== syncedWorkspaceKey) {
+    setSyncedWorkspaceKey(workspaceSyncKey);
+    setWebsiteUrl(workspace?.website_url ?? "");
+    setSavedUrl(workspace?.website_url ?? "");
+  }
+
   useEffect(() => {
     if (!workspaceId) return;
 
@@ -496,7 +519,7 @@ export default function WorkspaceSignalEntry() {
                   placeholder="https://yourcompany.com"
                   maxLength={2048}
                   disabled={saving}
-                  autoComplete="url"
+                  autoComplete="off"
                   className="w-full bg-transparent font-mono text-base text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] disabled:opacity-50 sm:text-lg"
                 />
               </div>

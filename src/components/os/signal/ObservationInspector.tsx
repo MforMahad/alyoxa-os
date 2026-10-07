@@ -44,7 +44,7 @@ export const ObservationInspector: React.FC<ObservationInspectorProps> = ({
           </div>
           <div className="text-[var(--foreground)] font-bold flex items-center gap-2">
             <span className="text-[var(--primary)]">{source?.code || 'UNKNOWN SOURCE'}</span>
-            <span>//</span>
+            <span>{'//'}</span>
             <span>{source?.name || 'Unknown Source'}</span>
           </div>
           {source?.endpointUrl && (
