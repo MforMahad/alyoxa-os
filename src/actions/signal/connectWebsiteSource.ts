@@ -189,7 +189,14 @@ export async function connectWebsiteSource(
     }
   )
 
-  if (rpcError) {   
+  if (rpcError) {
+    console.error('[WebsiteSource] Connection RPC failed.', {
+      workspaceId,
+      code: rpcError.code,
+      message: rpcError.message,
+      details: rpcError.details,
+      hint: rpcError.hint,
+    })
     return {
       success: false,
       error:
