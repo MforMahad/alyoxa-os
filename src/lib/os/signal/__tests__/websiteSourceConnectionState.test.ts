@@ -1,6 +1,7 @@
 import {
   getWebsiteSourceConnectionKey,
   getWebsiteSourceConnectionState,
+  getSelectedWebsiteConnection,
   recordWebsiteSourceConnectionResult,
   setWebsiteSourceConnectionPending,
 } from '../websiteSourceConnectionState'
@@ -72,5 +73,17 @@ describe('website source connection state', () => {
     expect(
       getWebsiteSourceConnectionState(pendingConnections, otherKey).status
     ).toBe('not_connected')
+  })
+  it('selects the edited domain rather than displaying a previous successful source', () => {
+    const connections = recordWebsiteSourceConnectionResult({}, connectionKey, { success: true })
+    expect(getSelectedWebsiteConnection(connections, workspaceId, 'https://different.example.org/path')).toEqual({
+      label: 'different.example.org', connection: { status: 'not_connected', error: null },
+    })
+    expect(getSelectedWebsiteConnection(connections, workspaceId, `https://${domain}/`).connection.status).toBe('connected')
+  })
+  it('never reuses another workspace connection for the same domain', () => {
+    const connections = recordWebsiteSourceConnectionResult({}, connectionKey, { success: true })
+    expect(getSelectedWebsiteConnection(connections, 'workspace-b', `https://${domain}/`).connection.status).toBe('not_connected')
+    expect(getSelectedWebsiteConnection(connections, workspaceId, '').label).toBe('No website selected')
   })
 })

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { submitWebsiteAnalysis } from "@/actions/signal/submitWebsiteAnalysis";
@@ -8,7 +8,7 @@ import { getLatestWebsiteScanStatus } from "@/actions/signal/getLatestWebsiteSca
 import { getWebsiteScanStatus } from "@/actions/signal/getWebsiteScanStatus";
 import {
   getWebsiteSourceConnectionKey,
-  getWebsiteSourceConnectionState,
+  getSelectedWebsiteConnection,
   recordWebsiteSourceConnectionResult,
   setWebsiteSourceConnectionPending,
   type WebsiteSourceConnectionsByKey,
@@ -32,6 +32,12 @@ import {
 import { useWorkspace } from "./WorkspaceProvider";
 
 export default function WorkspaceSignalEntry() {
+  const { workspace } = useWorkspace();
+  // Reset domain-keyed state and in-flight requests at the workspace boundary.
+  return <WorkspaceSignalEntryContent key={workspace?.id ?? "no-workspace"} />;
+}
+
+function WorkspaceSignalEntryContent() {
   const router = useRouter();
   const { workspace } = useWorkspace();
   const workspaceId = workspace?.id;
@@ -46,6 +52,7 @@ export default function WorkspaceSignalEntry() {
     useState<WebsiteSourceConnectionsByKey>({});
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const statusRevision = useRef(0);
   const [requestLatestStatus] = useState(() =>
     createSingleFlightRequest(getLatestWebsiteScanStatus)
   );
@@ -79,24 +86,9 @@ export default function WorkspaceSignalEntry() {
     .join("|");
 
   const hasSavedWebsite = Boolean(savedUrl);
-  const savedDomain = normalizeWebsiteDomain(savedUrl);
-  const savedConnectionKey = getWebsiteSourceConnectionKey(
-    workspaceId,
-    savedDomain
-  );
-  const websiteConnection = getWebsiteSourceConnectionState(
-    connectionsByDomain,
-    savedConnectionKey
-  );
+  const { label: websiteLabel, connection: websiteConnection } =
+    getSelectedWebsiteConnection(connectionsByDomain, workspaceId, websiteUrl);
   const websiteWasEdited = websiteUrl.trim() !== savedUrl.trim();
-  const websiteLabel = useMemo(() => {
-    if (!savedUrl) return "No source connected";
-    try {
-      return new URL(savedUrl).hostname;
-    } catch {
-      return savedUrl;
-    }
-  }, [savedUrl]);
 
   // The website URL input is seeded from `workspace?.website_url` via
   // useState, which only runs on this component's first mount. If the
@@ -111,8 +103,7 @@ export default function WorkspaceSignalEntry() {
   // rather than in an effect body (which the project's
   // react-hooks/set-state-in-effect lint rule also enforces, since an
   // effect-based reset here would cost an extra render pass for no
-  // benefit). This does not touch `scansByDomain`, which remains keyed
-  // by domain independently of which workspace is currently active.
+  // benefit). Workspace changes remount this content and clear all scan state.
   const workspaceSyncKey = `${workspace?.id ?? ""}:${workspace?.website_url ?? ""}`;
   const [syncedWorkspaceKey, setSyncedWorkspaceKey] = useState(workspaceSyncKey);
   if (workspaceSyncKey !== syncedWorkspaceKey) {
@@ -125,11 +116,12 @@ export default function WorkspaceSignalEntry() {
     if (!workspaceId) return;
 
     let cancelled = false;
+    const revision = statusRevision.current;
 
     async function restorePrimaryWebsiteScan() {
       try {
         const result = await requestLatestStatus();
-        if (cancelled) return;
+        if (cancelled || revision !== statusRevision.current) return;
 
         if (!result.success) {
           const domain = normalizeWebsiteDomain(workspace?.website_url ?? "");
@@ -160,7 +152,7 @@ export default function WorkspaceSignalEntry() {
           }));
         }
       } catch {
-        if (cancelled) return;
+        if (cancelled || revision !== statusRevision.current) return;
         const domain = normalizeWebsiteDomain(workspace?.website_url ?? "");
         if (domain) {
           setScansByDomain((current) => ({
@@ -267,9 +259,11 @@ export default function WorkspaceSignalEntry() {
 
   async function restoreWebsiteDomainStatus(domain: string | null) {
     if (!domain) return;
+    const revision = statusRevision.current;
 
     try {
       const result = await requestLatestStatusByDomain(domain);
+      if (revision !== statusRevision.current) return;
       if (!result.success) {
         setScansByDomain((current) => ({
           ...current,
@@ -296,6 +290,7 @@ export default function WorkspaceSignalEntry() {
         }));
       }
     } catch {
+      if (revision !== statusRevision.current) return;
       setScansByDomain((current) => ({
         ...current,
         [domain]: {
@@ -341,6 +336,7 @@ export default function WorkspaceSignalEntry() {
     setMessage("");
     setError("");
     setSaving(true);
+    statusRevision.current += 1;
 
     try {
       const resultDomain = submittedDomain;
@@ -355,6 +351,9 @@ export default function WorkspaceSignalEntry() {
             connectResult
           )
         );
+        setScansByDomain((current) => ({ ...current, [resultDomain]: {
+          id: "", websiteDomain: resultDomain, status: "unavailable", errorMessage: connectResult.error,
+        } }));
         setError(connectResult.error);
         setMessage("");
         return;
@@ -421,6 +420,10 @@ export default function WorkspaceSignalEntry() {
         }));
       }
     } catch {
+      setScansByDomain((current) => ({ ...current, [submittedDomain]: {
+        id: "", websiteDomain: submittedDomain, status: "unavailable",
+        errorMessage: "Submission could not be confirmed. Please retry later.",
+      } }));
       setError(
         "Something went wrong while connecting the website. Please try again."
       );
@@ -529,6 +532,7 @@ export default function WorkspaceSignalEntry() {
                   type="url"
                   value={websiteUrl}
                   onChange={(event) => {
+                    statusRevision.current += 1;
                     setWebsiteUrl(event.target.value);
                     setError("");
                     setMessage("");
@@ -632,7 +636,7 @@ export default function WorkspaceSignalEntry() {
                 Source
               </div>
               <div className="mt-2 truncate font-mono text-xs font-bold uppercase">
-                {hasSavedWebsite ? websiteLabel : "Website"}
+                {websiteLabel}
               </div>
             </div>
             <div className="border border-[var(--border)] p-4">

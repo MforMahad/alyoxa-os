@@ -1,3 +1,5 @@
+import { normalizeWebsiteDomain } from './overviewScanStatus'
+
 export interface WebsiteSourceConnectionState {
   status: 'connected' | 'not_connected'
   error: string | null
@@ -11,6 +13,19 @@ export type WebsiteSourceConnectionsByKey = Record<
 export type WebsiteSourceConnectionResult =
   | { success: true }
   | { success: false; error: string }
+
+/** Source label, badge and scan selection all refer to the edited URL. */
+export function getSelectedWebsiteConnection(
+  connections: WebsiteSourceConnectionsByKey,
+  workspaceId: string | undefined,
+  websiteUrl: string,
+) {
+  const domain = normalizeWebsiteDomain(websiteUrl)
+  return {
+    label: domain ?? 'No website selected',
+    connection: getWebsiteSourceConnectionState(connections, getWebsiteSourceConnectionKey(workspaceId, domain)),
+  }
+}
 
 export function getWebsiteSourceConnectionKey(
   workspaceId: string | undefined,
