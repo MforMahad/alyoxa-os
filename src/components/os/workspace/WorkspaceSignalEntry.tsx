@@ -3,10 +3,9 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { connectWebsiteSource } from "@/actions/signal/connectWebsiteSource";
+import { submitWebsiteAnalysis } from "@/actions/signal/submitWebsiteAnalysis";
 import { getLatestWebsiteScanStatus } from "@/actions/signal/getLatestWebsiteScanStatus";
 import { getWebsiteScanStatus } from "@/actions/signal/getWebsiteScanStatus";
-import { updateWorkspaceWebsite } from "@/actions/workspaces/updateWorkspaceWebsite";
 import {
   getWebsiteSourceConnectionKey,
   getWebsiteSourceConnectionState,
@@ -344,34 +343,10 @@ export default function WorkspaceSignalEntry() {
     setSaving(true);
 
     try {
-      const updateResult = await updateWorkspaceWebsite({
-        workspaceId: workspace.id,
-        websiteUrl: websiteUrl.trim(),
-      });
-
-      if (!updateResult.success) {
-        setError(updateResult.error);
-        return;
-      }
-
-      setWebsiteUrl(updateResult.data.website_url);
-      setSavedUrl(updateResult.data.website_url);
-      setMessage("Website saved. Starting analysis...");
-
-      const resultDomain = normalizeWebsiteDomain(
-        updateResult.data.website_url
-      );
-      const connectionKey = getWebsiteSourceConnectionKey(
-        workspace.id,
-        resultDomain
-      );
-      setConnectionsByDomain((current) =>
-        setWebsiteSourceConnectionPending(current, connectionKey)
-      );
-
-      const connectResult = await connectWebsiteSource({
-        workspaceId: workspace.id,
-      });
+      const resultDomain = submittedDomain;
+      const connectionKey = getWebsiteSourceConnectionKey(workspace.id, resultDomain);
+      setConnectionsByDomain((current) => setWebsiteSourceConnectionPending(current, connectionKey));
+      const connectResult = await submitWebsiteAnalysis({ workspaceId: workspace.id, websiteUrl: websiteUrl.trim() });
       if (!connectResult.success) {
         setConnectionsByDomain((current) =>
           recordWebsiteSourceConnectionResult(
@@ -385,6 +360,8 @@ export default function WorkspaceSignalEntry() {
         return;
       }
 
+      setWebsiteUrl(connectResult.websiteUrl);
+      setSavedUrl(connectResult.websiteUrl);
       if (!resultDomain) {
         setError("The saved website URL could not be resolved.");
         return;
@@ -508,6 +485,8 @@ export default function WorkspaceSignalEntry() {
           <p className="mt-5 max-w-lg font-mono text-xs leading-6 text-[var(--muted)]">
             Connect the website that represents this workspace. It becomes
             Signal&apos;s first external source of context.
+            {' '}Current database support scans the website origin only, on standard HTTP/HTTPS ports.
+            Owners and administrators can submit. Path-specific snapshots require a reviewed database change.
           </p>
           <div className="mt-8 border-t border-[var(--border)] pt-4">
             <div className="font-mono text-[9px] tracking-[0.14em] text-[var(--muted)] uppercase">

@@ -1,46 +1,19 @@
 import 'server-only'
 
-import { lookup } from 'node:dns/promises'
-import { isIP } from 'node:net'
-import type { IncomingMessage } from 'node:http'
-import type { RequestOptions as HttpsRequestOptions } from 'node:https'
-import { request as httpRequest } from 'node:http'
-import { request as httpsRequest } from 'node:https'
 import { randomUUID } from 'node:crypto'
-import {
-  createPinnedLookup,
-  extractWebsitePage,
-  isIpLiteral,
-  isPublicIpAddress,
-  normalizeFetchedUrl,
-  parseWebsiteUrl,
-  WEBSITE_SCAN_MAX_RESPONSE_BYTES,
-} from './websiteScanUtils'
+import { extractWebsitePage, normalizeFetchedUrl, parseWebsiteUrl } from './websiteScanUtils'
+import { fetchWebsiteHtml, WebsiteScanError } from './websiteFetch'
+import { analyzeWebsiteHtml } from './websiteIntelligence'
+import { recommendWebsiteImprovements } from './websiteRecommendations'
 import { createServiceRoleClient } from '@/lib/supabase/serviceRole'
 
 const SCAN_ID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-const REQUEST_TIMEOUT_MS = 8000
-const MAX_REDIRECTS = 4
 const OBSERVATION_CATEGORY = 'website_content'
 
 type ProcessWebsiteScanResult =
   | { status: 'completed'; scanId: string; observationPublicId: string }
   | { status: 'skipped'; reason: 'invalid_id' | 'not_found' | 'not_queued' }
   | { status: 'failed'; scanId: string }
-
-interface PinnedAddress {
-  address: string
-  family: number
-}
-
-interface FetchResponse {
-  body: Buffer
-  contentType: string
-  finalUrl: URL
-  statusCode: number
-}
-
-class WebsiteScanError extends Error {}
 
 export async function processWebsiteScan(
   scanId: string
@@ -144,12 +117,14 @@ export async function processWebsiteScan(
     }
 
     const fetched = await fetchWebsiteHtml(websiteUrl)
+    const analysis = analyzeWebsiteHtml(fetched.body.toString('utf8'), fetched.finalUrl, fetched.headers)
+    const ai = await recommendWebsiteImprovements(analysis.evidence, analysis.limitations, analysis.excludedFromAI)
     const extracted = extractWebsitePage(fetched.body.toString('utf8'))
     const observationPublicId = `obs_${randomUUID().replace(/-/g, '')}`
     const description =
       extracted.description || extracted.text || 'Website page fetched successfully.'
 
-    const { error: observationError } = await supabase
+    const { data: persistedObservation, error: observationError } = await supabase
       .from('signal_observations')
       .insert({
         public_id: observationPublicId,
@@ -161,7 +136,12 @@ export async function processWebsiteScan(
         title: extracted.title,
         description: description.slice(0, 5000),
         metadata: {
-          version: 1,
+          version: 2,
+          coverage: 'partial',
+          scope: 'website_origin',
+          limitations: [...analysis.limitations, 'Existing website storage targets the origin; submitted path/query is not snapshotted by the database.'],
+          evidence: analysis.evidence,
+          ai,
           fetched_url: normalizeFetchedUrl(fetched.finalUrl),
           http_status: fetched.statusCode,
           content_type: fetched.contentType,
@@ -171,12 +151,13 @@ export async function processWebsiteScan(
           text_excerpt: extracted.text,
         },
         observed_at: new Date().toISOString(),
-      })
+      }).select('id, public_id, source_id, website_scan_id').single()
 
-    if (observationError) {
+    if (observationError || !persistedObservation?.id || persistedObservation.public_id !== observationPublicId ||
+        persistedObservation.source_id !== source.id || persistedObservation.website_scan_id !== existingScan.id) {
       console.error('[WebsiteScanProcessor] Failed persisting observation.', {
         scanId,
-        code: observationError.code,
+        code: observationError?.code, message: observationError?.message, details: observationError?.details,
       })
       throw new WebsiteScanError('The website observation could not be saved.')
     }
@@ -230,191 +211,4 @@ export async function processWebsiteScan(
 
     return { status: 'failed', scanId }
   }
-}
-
-async function fetchWebsiteHtml(startUrl: URL): Promise<FetchResponse> {
-  let currentUrl = startUrl
-  const deadline = Date.now() + REQUEST_TIMEOUT_MS
-
-  for (let redirectCount = 0; ; redirectCount += 1) {
-    const remainingMs = deadline - Date.now()
-    if (remainingMs <= 0) {
-      throw new WebsiteScanError('Website request timed out.')
-    }
-
-    const address = await resolvePublicAddress(currentUrl.hostname, remainingMs)
-    const response = await requestPage(currentUrl, address, remainingMs)
-
-    if ('redirectLocation' in response) {
-      if (redirectCount >= MAX_REDIRECTS) {
-        throw new WebsiteScanError('Website redirected too many times.')
-      }
-
-      try {
-        currentUrl = parseWebsiteUrl(new URL(response.redirectLocation, currentUrl).toString())
-      } catch (error) {
-        throw error instanceof WebsiteScanError
-          ? error
-          : new WebsiteScanError('Website redirected to an invalid URL.')
-      }
-      continue
-    }
-
-    return { ...response, finalUrl: currentUrl }
-  }
-}
-
-async function resolvePublicAddress(
-  hostname: string,
-  timeoutMs: number
-): Promise<PinnedAddress> {
-  const unwrappedHostname = hostname.replace(/^\[|\]$/g, '')
-
-  try {
-    const addresses = isIpLiteral(unwrappedHostname)
-      ? [{ address: unwrappedHostname, family: isIP(unwrappedHostname) }]
-      : await withTimeout(
-          lookup(unwrappedHostname, { all: true, verbatim: true }),
-          timeoutMs
-        )
-
-    if (!addresses.length || addresses.some(({ address }) => !isPublicIpAddress(address))) {
-      throw new WebsiteScanError('Website resolves to a non-public network address.')
-    }
-
-    const selected = addresses[0]
-    return { address: selected.address, family: selected.family }
-  } catch (error) {
-    if (error instanceof WebsiteScanError) {
-      throw error
-    }
-    throw new WebsiteScanError('Website hostname could not be safely resolved.')
-  }
-}
-
-function requestPage(
-  url: URL,
-  address: PinnedAddress,
-  timeoutMs: number
-): Promise<
-  | { redirectLocation: string }
-  | { body: Buffer; contentType: string; statusCode: number }
-> {
-  return new Promise((resolve, reject) => {
-    let settled = false
-    let receivedBytes = 0
-    const chunks: Buffer[] = []
-    const requestFunction = url.protocol === 'https:' ? httpsRequest : httpRequest
-    const pinnedLookup = createPinnedLookup(address.address, address.family)
-
-    const requestOptions: HttpsRequestOptions = {
-      agent: false,
-      headers: {
-        accept: 'text/html, application/xhtml+xml;q=0.9',
-        'accept-encoding': 'identity',
-        'user-agent': 'ALYOXA-WebsiteScanner/1.0',
-      },
-      lookup: pinnedLookup,
-      servername: isIpLiteral(url.hostname) ? undefined : url.hostname,
-    }
-
-    const req = requestFunction(url, requestOptions, (response: IncomingMessage) => {
-      const statusCode = response.statusCode ?? 0
-      const redirectLocation = response.headers.location
-
-      if ([301, 302, 303, 307, 308].includes(statusCode) && redirectLocation) {
-        response.resume()
-        settle(() => resolve({ redirectLocation }))
-        return
-      }
-
-      if (statusCode < 200 || statusCode >= 300) {
-        response.resume()
-        settle(() => reject(new WebsiteScanError(`Website returned HTTP ${statusCode}.`)))
-        return
-      }
-
-      const contentType = response.headers['content-type']?.toLowerCase() ?? ''
-      if (!/^text\/html(?:\s*;|$)|^application\/xhtml\+xml(?:\s*;|$)/.test(contentType)) {
-        response.resume()
-        settle(() => reject(new WebsiteScanError('Website response is not HTML.')))
-        return
-      }
-
-      const contentEncoding = response.headers['content-encoding']?.toLowerCase()
-      if (contentEncoding && contentEncoding !== 'identity') {
-        response.resume()
-        settle(() => reject(new WebsiteScanError('Website response encoding is not supported.')))
-        return
-      }
-
-      const contentLength = Number(response.headers['content-length'])
-      if (Number.isFinite(contentLength) && contentLength > WEBSITE_SCAN_MAX_RESPONSE_BYTES) {
-        response.resume()
-        settle(() => reject(new WebsiteScanError('Website response exceeded the size limit.')))
-        return
-      }
-
-      response.on('data', (chunk: Buffer | string) => {
-        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
-        receivedBytes += buffer.byteLength
-
-        if (receivedBytes > WEBSITE_SCAN_MAX_RESPONSE_BYTES) {
-          req.destroy(new Error('Response size limit exceeded.'))
-          settle(() => reject(new WebsiteScanError('Website response exceeded the size limit.')))
-          return
-        }
-
-        chunks.push(buffer)
-      })
-
-      response.on('end', () => {
-        settle(() =>
-          resolve({ body: Buffer.concat(chunks), contentType, statusCode })
-        )
-      })
-
-      response.on('error', () => {
-        settle(() => reject(new WebsiteScanError('Website response could not be read.')))
-      })
-    })
-
-    const timer = setTimeout(() => {
-      req.destroy(new Error('Website request timed out.'))
-      settle(() => reject(new WebsiteScanError('Website request timed out.')))
-    }, timeoutMs)
-
-    req.on('error', () => {
-      settle(() => reject(new WebsiteScanError('Website request failed.')))
-    })
-    req.on('close', () => clearTimeout(timer))
-    req.end()
-
-    function settle(action: () => void) {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      action()
-    }
-  })
-}
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new WebsiteScanError('Website hostname resolution timed out.')),
-      timeoutMs
-    )
-
-    promise.then(
-      (value) => {
-        clearTimeout(timer)
-        resolve(value)
-      },
-      () => {
-        clearTimeout(timer)
-        reject(new WebsiteScanError('Website hostname could not be safely resolved.'))
-      }
-    )
-  })
 }

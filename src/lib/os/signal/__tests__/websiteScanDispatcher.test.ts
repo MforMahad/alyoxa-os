@@ -115,6 +115,7 @@ describe('dispatchOldestQueuedWebsiteScan', () => {
       {
         method: 'POST',
         headers: { authorization: 'Bearer test-secret' },
+        signal: expect.any(AbortSignal),
       }
     )
     // A successful dispatch must never touch scan state itself - the

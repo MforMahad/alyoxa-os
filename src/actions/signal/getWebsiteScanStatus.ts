@@ -1,5 +1,7 @@
 'use server'
 
+import { retainedScanStatus } from '@/lib/os/signal/retainedScanStatus'
+
 import { getActiveWorkspace } from '@/actions/workspaces/getActiveWorkspace'
 import { createClient } from '@/lib/supabase/server'
 import type { LatestWebsiteScanStatus } from './getLatestWebsiteScanStatus'
@@ -81,11 +83,10 @@ export async function getWebsiteScanStatus(
     success: true,
     data: {
       id: scan.id,
-      status: scan.status,
       created_at: scan.created_at,
       started_at: scan.started_at,
       completed_at: scan.completed_at,
-      error_message: scan.error_message,
+      ...await retainedScanStatus(supabase, scan),
       website_domain: website.normalized_domain,
     },
   }

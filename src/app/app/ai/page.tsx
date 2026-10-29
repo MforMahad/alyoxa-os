@@ -5,14 +5,11 @@ import { AIContextWorkspace } from '@/components/os/ai/AIContextWorkspace';
 import { AIDecisionsWorkspace } from '@/components/os/ai/AIDecisionsWorkspace';
 
 import { AIWorkspacePlaceholder } from '@/components/os/ai/AIWorkspacePlaceholder';
-import {
-  aiCoreContextRegistry,
-  buildPersistedSignalObservationContexts,
-} from '@/data/os/ai/aiCore';
+import { buildWebsiteContexts } from '@/lib/os/signal/persistedWebsiteContexts';
 import { listWorkspaceObservations } from '@/actions/signal/listWorkspaceObservations';
 
-import { aiRunsRegistry } from '@/data/os/ai/aiRuns';
-import { aiDecisionsRegistry } from '@/data/os/ai/aiDecisions';
+import { WebsiteObservationDetails } from '@/components/os/signal/WebsiteObservationDetails';
+
 import { AIRunsWorkspace } from '@/components/os/ai/AIRunsWorkspace';
 
 interface AIPageProps {
@@ -24,9 +21,9 @@ interface AIPageProps {
 export default async function AIPage({ searchParams }: AIPageProps) {
   const persistedObservationsResult = await listWorkspaceObservations();
   const persistedObservationContexts = persistedObservationsResult.success
-    ? buildPersistedSignalObservationContexts(persistedObservationsResult.data)
+    ? buildWebsiteContexts(persistedObservationsResult.data)
     : [];
-  const aiContexts = [...aiCoreContextRegistry, ...persistedObservationContexts];
+  const aiContexts = persistedObservationContexts;
 
   if (!persistedObservationsResult.success) {
     console.error('[AIPage] Persisted Signal observations were unavailable.');
@@ -46,7 +43,7 @@ export default async function AIPage({ searchParams }: AIPageProps) {
 
       {/* Main AI Environment */}
       <div className="flex-1 flex flex-col min-w-0">
-        <AICoreHeader />
+        <AICoreHeader configured={Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_WEBSITE_MODEL)} />
         <AISubNav activeTab={activeTab} />
 
         <main className="flex-1 p-6 space-y-6 overflow-x-hidden">
@@ -66,16 +63,21 @@ export default async function AIPage({ searchParams }: AIPageProps) {
           {/* Active Stage */}
           <section>
             {activeTab === 'context' ? (
-              <AIContextWorkspace items={aiContexts} />
+              <div className="space-y-5">
+                {!persistedObservationsResult.success && <p role="alert">{persistedObservationsResult.error}</p>}
+                <p>Real workspace observations only (up to 200 most recent). Recommendations are generated during scanning when AI is configured; absence of recommendations is not a successful AI run.</p>
+                <AIContextWorkspace items={aiContexts} />
+                {persistedObservationsResult.success && persistedObservationsResult.data.map(observation => <article key={observation.id} className="border border-[var(--border)] p-4 space-y-3"><h2>{observation.title}</h2><p>{observation.observed_at} ? {observation.public_id}</p><WebsiteObservationDetails metadata={observation.metadata} /></article>)}
+              </div>
             ) : activeTab === 'decisions' ? (
               <AIDecisionsWorkspace
-                decisions={aiDecisionsRegistry}
+                decisions={[]}
                 contexts={aiContexts}
               />
             ) : activeTab === 'runs' ? (
               <AIRunsWorkspace
-                runs={aiRunsRegistry}
-                decisions={aiDecisionsRegistry}
+                runs={[]}
+                decisions={[]}
                 contexts={aiContexts}
               />
             ) : (

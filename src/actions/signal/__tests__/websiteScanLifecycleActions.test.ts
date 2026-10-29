@@ -38,6 +38,7 @@ interface MockClientOptions {
   exactScan?: Record<string, unknown> | null
   source?: Record<string, unknown> | null
   rpcData?: unknown
+  observation?: Record<string, unknown> | null
 }
 
 function createMockClient(options: MockClientOptions = {}) {
@@ -80,6 +81,7 @@ function createMockClient(options: MockClientOptions = {}) {
       query.limit = jest.fn(() => query)
 
       const resolveRow = () => {
+        if (table === 'signal_observations') return options.observation === undefined ? { id: 'retained-observation' } : options.observation
         if (table === 'users') {
           return { id: 'app-user-id' }
         }
@@ -356,5 +358,15 @@ describe('website scan lifecycle actions', () => {
     })
 
     expect(createClientMock).not.toHaveBeenCalled()
+  })
+  it('reports historical completion without evidence as unverified without changing the scan', async () => {
+    const { client } = createMockClient({ observation: null, exactScan: {
+      id: scanId, website_id: websiteId, status: 'completed', created_at: '2026-09-28T10:00:00Z',
+      started_at: null, completed_at: '2026-09-28T10:00:00Z', error_message: null,
+    } })
+    createClientMock.mockResolvedValue(client as never)
+    expect(await getWebsiteScanStatus(scanId)).toMatchObject({ success: true, data: {
+      status: 'unverified', error_message: expect.stringContaining('no retained observation'),
+    } })
   })
 })

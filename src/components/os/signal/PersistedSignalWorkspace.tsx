@@ -1,3 +1,4 @@
+import { WebsiteObservationDetails } from './WebsiteObservationDetails'
 import type {
   PersistedSignalFeedSource,
   PersistedSignalObservation,
@@ -84,6 +85,8 @@ export function PersistedSignalWorkspace({
                 </time>
               </div>
               <h2 className="font-bold text-[var(--foreground)]">{observation.title}</h2>
+              <p>Scan: {observation.website_scan_id ?? 'Not recorded'} ? Observation: {observation.public_id}</p>
+              <WebsiteObservationDetails metadata={observation.metadata} />
               <p className="text-[11px] leading-relaxed text-[var(--muted)]">{observation.description}</p>
             </article>
           ))}

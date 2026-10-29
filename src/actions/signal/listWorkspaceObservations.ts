@@ -43,6 +43,7 @@ export async function listWorkspaceObservations(): Promise<ListWorkspaceObservat
       source:signal_feed_sources!inner(workspace_id)
     `)
     .eq('source.workspace_id', activeWorkspace.data.id)
+    .limit(200)
     .order('observed_at', { ascending: false })
 
   if (error) {

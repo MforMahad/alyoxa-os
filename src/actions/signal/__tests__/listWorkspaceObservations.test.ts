@@ -58,6 +58,7 @@ function makeObservation(
 function mockSupabase(rows: MockObservation[]) {
   let matchingRows = [...rows]
   const query = {
+    limit: jest.fn(() => query),
     select: jest.fn(() => query),
     eq: jest.fn((field: string, value: string) => {
       if (field === 'source.workspace_id') {

@@ -93,6 +93,7 @@ export async function dispatchOldestQueuedWebsiteScan({
     const response = await fetchImpl(endpoint, {
       method: 'POST',
       headers: { authorization: `Bearer ${triggerSecret}` },
+      signal: AbortSignal.timeout(45000),
     })
 
     if (response.ok) {
