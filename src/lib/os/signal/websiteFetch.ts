@@ -6,10 +6,11 @@ import { request as httpRequest } from 'node:http'
 import { request as httpsRequest } from 'node:https'
 import { createPinnedLookup, isIpLiteral, isPublicIpAddress, parseWebsiteUrl, WEBSITE_SCAN_MAX_RESPONSE_BYTES } from './websiteScanUtils'
 import { evaluateRobotsPolicy } from './websiteIntelligence'
+import { robotsSiteCheck, SITEMAP_MAX_BYTES, type SiteResourceCheck } from './websiteSiteChecks'
 const REQUEST_TIMEOUT_MS = 8000
 const MAX_REDIRECTS = 4
 interface PinnedAddress { address: string; family: number }
-export interface FetchResponse { body: Buffer; contentType: string; finalUrl: URL; statusCode: number; headers: Record<string, string | string[] | undefined> }
+export interface FetchResponse { body: Buffer; contentType: string; finalUrl: URL; statusCode: number; headers: Record<string, string | string[] | undefined>; siteChecks?: SiteResourceCheck[] }
 export class WebsiteScanError extends Error {}
 export class WebsiteHttpError extends WebsiteScanError {
   constructor(public readonly statusCode: number, public readonly retryAfter?: string | string[]) {
@@ -27,7 +28,7 @@ export async function fetchWebsiteHtml(startUrl: URL): Promise<FetchResponse> {
     }
 
     const address = await resolvePublicAddress(currentUrl.hostname, remainingMs)
-    await checkRobots(currentUrl, deadline)
+    const robotsCheck = await checkRobots(currentUrl, deadline)
     const response = await requestPage(currentUrl, address, Math.max(1, deadline - Date.now()))
 
     if ('redirectLocation' in response) {
@@ -45,7 +46,7 @@ export async function fetchWebsiteHtml(startUrl: URL): Promise<FetchResponse> {
       continue
     }
 
-    return { ...response, finalUrl: currentUrl }
+    return { ...response, finalUrl: currentUrl, siteChecks: [robotsCheck] }
   }
 }
 
@@ -81,9 +82,9 @@ export function requestPage(
   url: URL,
   address: PinnedAddress,
   timeoutMs: number,
-  robots = false,
+  robots: boolean | 'sitemap' = false,
 ): Promise<
-  | { redirectLocation: string; retryAfter?: string | string[] }
+  | { redirectLocation: string; retryAfter?: string | string[]; statusCode?: number }
   | { body: Buffer; contentType: string; statusCode: number; headers: Record<string, string | string[] | undefined> }
 > {
   return new Promise((resolve, reject) => {
@@ -96,7 +97,7 @@ export function requestPage(
     const requestOptions: HttpsRequestOptions = {
       agent: false,
       headers: {
-        accept: robots ? 'text/plain, */*;q=0.1' : 'text/html, application/xhtml+xml;q=0.9',
+        accept: robots === 'sitemap' ? 'application/xml, text/xml;q=0.9' : robots ? 'text/plain, */*;q=0.1' : 'text/html, application/xhtml+xml;q=0.9',
         'accept-encoding': 'identity',
         'user-agent': 'ALYOXA-WebsiteScanner/1.0',
       },
@@ -110,7 +111,7 @@ export function requestPage(
 
       if ([301, 302, 303, 307, 308].includes(statusCode) && redirectLocation) {
         response.destroy()
-        settle(() => resolve({ redirectLocation, ...(response.headers['retry-after'] ? { retryAfter: response.headers['retry-after'] } : {}) }))
+        settle(() => resolve({ redirectLocation, statusCode, ...(response.headers['retry-after'] ? { retryAfter: response.headers['retry-after'] } : {}) }))
         return
       }
 
@@ -135,7 +136,8 @@ export function requestPage(
       }
 
       const contentLength = Number(response.headers['content-length'])
-      if (Number.isFinite(contentLength) && contentLength > WEBSITE_SCAN_MAX_RESPONSE_BYTES) {
+      const byteLimit = robots === 'sitemap' ? SITEMAP_MAX_BYTES : WEBSITE_SCAN_MAX_RESPONSE_BYTES
+      if (Number.isFinite(contentLength) && contentLength > byteLimit) {
         response.destroy()
         settle(() => reject(new WebsiteScanError('Website response exceeded the size limit.')))
         return
@@ -145,7 +147,7 @@ export function requestPage(
         const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
         receivedBytes += buffer.byteLength
 
-        if (receivedBytes > WEBSITE_SCAN_MAX_RESPONSE_BYTES) {
+        if (receivedBytes > byteLimit) {
           req.destroy(new Error('Response size limit exceeded.'))
           settle(() => reject(new WebsiteScanError('Website response exceeded the size limit.')))
           return
@@ -204,7 +206,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
     )
   })
 }
-async function checkRobots(url: URL, deadline: number): Promise<void> {
+async function checkRobots(url: URL, deadline: number): Promise<SiteResourceCheck> {
   let current = new URL('/robots.txt', url)
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
     const remaining = deadline - Date.now()
@@ -213,7 +215,7 @@ async function checkRobots(url: URL, deadline: number): Promise<void> {
     let response
     try { response = await requestPage(current, address, Math.max(1, deadline - Date.now()), true) }
     catch (error) {
-      if (error instanceof Error && /HTTP (404|410)\./.test(error.message)) return
+      if (error instanceof WebsiteHttpError && [404, 410].includes(error.statusCode)) return robotsSiteCheck('', new URL('/robots.txt', url).toString(), current.toString(), error.statusCode, 'missing')
       throw new WebsiteScanError('Robots directives could not be verified; content was not fetched.')
     }
     if ('redirectLocation' in response) {
@@ -227,7 +229,7 @@ async function checkRobots(url: URL, deadline: number): Promise<void> {
     const delayMs = policy.crawlDelaySeconds * 1000
     if (!Number.isFinite(delayMs) || delayMs >= deadline - Date.now()) throw new WebsiteScanError('Robots crawl delay exceeds the fetch budget; content was not fetched.')
     if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs))
-    return
+    return robotsSiteCheck(body, new URL('/robots.txt', url).toString(), current.toString(), response.statusCode)
   }
   throw new WebsiteScanError('Robots redirected too many times.')
 }

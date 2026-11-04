@@ -1,3 +1,4 @@
+import type { SiteResourceCheck, SiteResourceRequest } from '../websiteSiteChecks'
 export interface AuditClaim {
   audit_id: string
   page_id: string
@@ -8,15 +9,18 @@ export interface AuditClaim {
   redirect_count: number
   robots_body: string | null
   robots_url?: string | null
+  site_checks?: SiteResourceCheck[]
+  site_resource?: SiteResourceRequest
 }
 export interface AuditLink { url: string; priority: number }
 export type AuditOutcome = (
   | { kind: 'policy'; robots_body: string; delay_ms: number }
   | { kind: 'redirect'; url: string }
   | { kind: 'policy_redirect'; url: string }
+  | { kind: 'site_resource'; resource: SiteResourceCheck; next_url?: string }
   | { kind: 'retry' | 'failed' | 'skipped'; reason: string; delay_ms?: number }
   | { kind: 'completed'; url: string; title: string; description: string; metadata: Record<string, unknown>; links: AuditLink[]; discovery_truncated: boolean }
-) & { not_before?: string; host_blocked?: boolean }
+) & { not_before?: string; host_blocked?: boolean; site_check?: SiteResourceCheck }
 
 export interface AuditRepository {
   claim(): Promise<AuditClaim | null>

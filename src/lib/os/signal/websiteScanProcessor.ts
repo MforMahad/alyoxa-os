@@ -8,6 +8,7 @@ import { recommendWebsiteImprovements } from './websiteRecommendations'
 import { diagnosticText } from './websiteSubmissionDiagnostics'
 import { createServiceRoleClient } from '@/lib/supabase/serviceRole'
 import { sharedCrawlEnabled } from './audit/contracts'
+import { siteCheckEvidence } from './websiteSiteChecks'
 
 const SCAN_ID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const OBSERVATION_CATEGORY = 'website_content'
@@ -160,7 +161,8 @@ export async function processWebsiteScan(
             coverage: 'partial',
             scope: 'website_origin',
             limitations: [...analysis.limitations, 'Existing website storage targets the origin; submitted path/query is not snapshotted by the database.'],
-            evidence: analysis.evidence,
+            evidence: [...analysis.evidence, ...siteCheckEvidence(fetched.siteChecks ?? [])],
+            site_checks: fetched.siteChecks ?? [],
             ai,
             fetched_url: normalizeFetchedUrl(fetched.finalUrl),
             http_status: fetched.statusCode,
