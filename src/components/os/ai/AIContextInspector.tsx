@@ -84,15 +84,15 @@ export const AIContextInspector: React.FC<AIContextInspectorProps> = ({
       </div>
 
       {/* Raw Payload Section */}
-      <div className="space-y-2 pt-2 border-t border-[var(--border)]/40">
-        <div className="text-[10px] text-[var(--muted)] uppercase tracking-widest flex justify-between items-center">
+      <details key={item.id} className="space-y-2 pt-2 border-t border-[var(--border)]/40">
+        <summary className="cursor-pointer text-[10px] text-[var(--muted)] uppercase tracking-widest">
           <span>Context Frame Payload</span>
           <span className="text-[var(--muted)]">[JSON]</span>
-        </div>
-        <pre className="p-3 bg-[var(--surface)]/20 border border-[var(--border)] text-[10px] text-[var(--foreground)]/90 overflow-x-auto font-mono leading-tight">
+        </summary>
+        <pre className="max-h-64 p-3 bg-[var(--surface)]/20 border border-[var(--border)] text-[10px] text-[var(--foreground)]/90 overflow-auto font-mono leading-tight">
           {JSON.stringify(item.payload, null, 2)}
         </pre>
-      </div>
+      </details>
 
       {/* Boundary Note */}
       <div className="p-3 border border-[var(--border)] bg-[var(--surface)]/10 text-[10px] text-[var(--muted)] leading-relaxed">

@@ -1,16 +1,11 @@
 import { OverviewSidebar } from '@/components/os/OverviewSidebar';
 import { AICoreHeader } from '@/components/os/ai/AICoreHeader';
 import { AISubNav, AITab } from '@/components/os/ai/AISubNav';
-import { AIContextWorkspace } from '@/components/os/ai/AIContextWorkspace';
-import { AIDecisionsWorkspace } from '@/components/os/ai/AIDecisionsWorkspace';
-
-import { AIWorkspacePlaceholder } from '@/components/os/ai/AIWorkspacePlaceholder';
-import { buildWebsiteContexts } from '@/lib/os/signal/persistedWebsiteContexts';
 import { listWorkspaceObservations } from '@/actions/signal/listWorkspaceObservations';
-
-import { WebsiteObservationDetails } from '@/components/os/signal/WebsiteObservationDetails';
-
-import { AIRunsWorkspace } from '@/components/os/ai/AIRunsWorkspace';
+import { listWorkspaceFeedSources } from '@/actions/signal/listWorkspaceFeedSources';
+import { listWorkspaceWebsiteScans } from '@/actions/signal/listWorkspaceWebsiteScans';
+import { getActiveWorkspace } from '@/actions/workspaces/getActiveWorkspace';
+import { AIWebsiteResults } from '@/components/os/ai/AIWebsiteResults';
 
 interface AIPageProps {
   searchParams?: Promise<{
@@ -19,11 +14,9 @@ interface AIPageProps {
 }
 
 export default async function AIPage({ searchParams }: AIPageProps) {
-  const persistedObservationsResult = await listWorkspaceObservations();
-  const persistedObservationContexts = persistedObservationsResult.success
-    ? buildWebsiteContexts(persistedObservationsResult.data)
-    : [];
-  const aiContexts = persistedObservationContexts;
+  const [persistedObservationsResult, sources, scans, workspace] = await Promise.all([
+    listWorkspaceObservations(), listWorkspaceFeedSources(), listWorkspaceWebsiteScans(), getActiveWorkspace(),
+  ]);
 
   if (!persistedObservationsResult.success) {
     console.error('[AIPage] Persisted Signal observations were unavailable.');
@@ -62,27 +55,15 @@ export default async function AIPage({ searchParams }: AIPageProps) {
 
           {/* Active Stage */}
           <section>
-            {activeTab === 'context' ? (
-              <div className="space-y-5">
-                {!persistedObservationsResult.success && <p role="alert">{persistedObservationsResult.error}</p>}
-                <p>Real workspace observations only (up to 200 most recent). Recommendations are generated during scanning when AI is configured; absence of recommendations is not a successful AI run.</p>
-                <AIContextWorkspace items={aiContexts} />
-                {persistedObservationsResult.success && persistedObservationsResult.data.map(observation => <article key={observation.id} className="border border-[var(--border)] p-4 space-y-3"><h2>{observation.title}</h2><p>{observation.observed_at} ? {observation.public_id}</p><WebsiteObservationDetails metadata={observation.metadata} /></article>)}
-              </div>
-            ) : activeTab === 'decisions' ? (
-              <AIDecisionsWorkspace
-                decisions={[]}
-                contexts={aiContexts}
-              />
-            ) : activeTab === 'runs' ? (
-              <AIRunsWorkspace
-                runs={[]}
-                decisions={[]}
-                contexts={aiContexts}
-              />
-            ) : (
-              <AIWorkspacePlaceholder tab={activeTab} />
-            )}
+            <div className="space-y-4">
+              {!workspace.success && <p role="alert">{workspace.error}</p>}
+              {!persistedObservationsResult.success && <p role="alert">{persistedObservationsResult.error}</p>}
+              {!sources.success && <p role="alert">{sources.error}</p>}
+              {!scans.success && <p role="alert">{scans.error}</p>}
+              <AIWebsiteResults workspaceId={workspace.success ? workspace.data.id : null}
+                observations={persistedObservationsResult.success ? persistedObservationsResult.data : []}
+                sources={sources.success ? sources.data : []} scans={scans.success ? scans.data : []} activeTab={activeTab} />
+            </div>
           </section>
         </main>
       </div>
