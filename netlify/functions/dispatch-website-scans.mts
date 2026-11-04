@@ -1,11 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Config } from '@netlify/functions'
+import { sharedCrawlEnabled } from '../../src/lib/os/signal/audit/contracts'
 import {
   dispatchOldestQueuedWebsiteScan,
+  dispatchCoordinatedQueuedWebsiteScan,
+  WebsiteScanDispatchBudget,
+  type CoordinatedScanQueueClient,
   type WebsiteScanQueueClient,
 } from '../../src/lib/os/signal/websiteScanDispatcher'
 
 export default async function dispatchWebsiteScans(): Promise<void> {
+  const budget = new WebsiteScanDispatchBudget()
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   const triggerSecret = process.env.WEBSITE_SCAN_TRIGGER_SECRET
@@ -23,11 +28,18 @@ export default async function dispatchWebsiteScans(): Promise<void> {
     },
   })
 
-  const result = await dispatchOldestQueuedWebsiteScan({
+  const result = sharedCrawlEnabled() ? await dispatchCoordinatedQueuedWebsiteScan({
+    queueClient: supabase as unknown as CoordinatedScanQueueClient,
+    appUrl, triggerSecret, budget,
+  }) : await dispatchOldestQueuedWebsiteScan({
     queueClient: supabase as unknown as WebsiteScanQueueClient,
     appUrl,
     triggerSecret,
+    budget,
   })
+
+  // The helper already logged the safe uncertain-result metadata.
+  if (result.status === 'dispatch_uncertain') return
 
   if (result.status === 'idle') {
     console.info('[WebsiteScanDispatcher] No queued scan.')

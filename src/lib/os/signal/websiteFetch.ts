@@ -11,6 +11,11 @@ const MAX_REDIRECTS = 4
 interface PinnedAddress { address: string; family: number }
 export interface FetchResponse { body: Buffer; contentType: string; finalUrl: URL; statusCode: number; headers: Record<string, string | string[] | undefined> }
 export class WebsiteScanError extends Error {}
+export class WebsiteHttpError extends WebsiteScanError {
+  constructor(public readonly statusCode: number, public readonly retryAfter?: string | string[]) {
+    super(`Website returned HTTP ${statusCode}.`)
+  }
+}
 export async function fetchWebsiteHtml(startUrl: URL): Promise<FetchResponse> {
   let currentUrl = startUrl
   const deadline = Date.now() + REQUEST_TIMEOUT_MS
@@ -44,7 +49,7 @@ export async function fetchWebsiteHtml(startUrl: URL): Promise<FetchResponse> {
   }
 }
 
-async function resolvePublicAddress(
+export async function resolvePublicAddress(
   hostname: string,
   timeoutMs: number
 ): Promise<PinnedAddress> {
@@ -72,13 +77,13 @@ async function resolvePublicAddress(
   }
 }
 
-function requestPage(
+export function requestPage(
   url: URL,
   address: PinnedAddress,
   timeoutMs: number,
   robots = false,
 ): Promise<
-  | { redirectLocation: string }
+  | { redirectLocation: string; retryAfter?: string | string[] }
   | { body: Buffer; contentType: string; statusCode: number; headers: Record<string, string | string[] | undefined> }
 > {
   return new Promise((resolve, reject) => {
@@ -105,13 +110,13 @@ function requestPage(
 
       if ([301, 302, 303, 307, 308].includes(statusCode) && redirectLocation) {
         response.destroy()
-        settle(() => resolve({ redirectLocation }))
+        settle(() => resolve({ redirectLocation, ...(response.headers['retry-after'] ? { retryAfter: response.headers['retry-after'] } : {}) }))
         return
       }
 
       if (statusCode < 200 || statusCode >= 300) {
         response.destroy()
-        settle(() => reject(new WebsiteScanError(`Website returned HTTP ${statusCode}.`)))
+        settle(() => reject(new WebsiteHttpError(statusCode, response.headers['retry-after'])))
         return
       }
 

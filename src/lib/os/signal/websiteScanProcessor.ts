@@ -5,21 +5,39 @@ import { extractWebsitePage, normalizeFetchedUrl, parseWebsiteUrl } from './webs
 import { fetchWebsiteHtml, WebsiteScanError } from './websiteFetch'
 import { analyzeWebsiteHtml } from './websiteIntelligence'
 import { recommendWebsiteImprovements } from './websiteRecommendations'
+import { diagnosticText } from './websiteSubmissionDiagnostics'
 import { createServiceRoleClient } from '@/lib/supabase/serviceRole'
+import { sharedCrawlEnabled } from './audit/contracts'
 
 const SCAN_ID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const OBSERVATION_CATEGORY = 'website_content'
 
-type ProcessWebsiteScanResult =
+function logObservationFailure(operation: string, scanId: string, error: unknown) {
+  const failure = error && typeof error === 'object' ? error as Record<string, unknown> : {}
+  console.error('[WebsiteScanProcessor] Failed persisting observation.', {
+    operation, scanId,
+    code: diagnosticText(failure.code),
+    message: diagnosticText(failure.message) ?? 'Unexpected observation persistence failure.',
+    details: diagnosticText(failure.details),
+    hint: diagnosticText(failure.hint),
+  })
+}
+
+export type ProcessWebsiteScanResult =
   | { status: 'completed'; scanId: string; observationPublicId: string }
   | { status: 'skipped'; reason: 'invalid_id' | 'not_found' | 'not_queued' }
   | { status: 'failed'; scanId: string }
+  | { status: 'deferred'; scanId: string }
 
 export async function processWebsiteScan(
   scanId: string
 ): Promise<ProcessWebsiteScanResult> {
   if (!SCAN_ID_REGEX.test(scanId)) {
     return { status: 'skipped', reason: 'invalid_id' }
+  }
+  if (sharedCrawlEnabled()) {
+    const { processCoordinatedQuickScan } = await import('./audit/quickProcessor')
+    return processCoordinatedQuickScan(scanId)
   }
 
   const supabase = createServiceRoleClient()
@@ -124,40 +142,53 @@ export async function processWebsiteScan(
     const description =
       extracted.description || extracted.text || 'Website page fetched successfully.'
 
-    const { data: persistedObservation, error: observationError } = await supabase
-      .from('signal_observations')
-      .insert({
-        public_id: observationPublicId,
-        source_id: source.id,
-        website_scan_id: existingScan.id,
-        source_event_id: `website_scan:${existingScan.public_id}`,
-        severity: 'low',
-        category: OBSERVATION_CATEGORY,
-        title: extracted.title,
-        description: description.slice(0, 5000),
-        metadata: {
-          version: 2,
-          coverage: 'partial',
-          scope: 'website_origin',
-          limitations: [...analysis.limitations, 'Existing website storage targets the origin; submitted path/query is not snapshotted by the database.'],
-          evidence: analysis.evidence,
-          ai,
-          fetched_url: normalizeFetchedUrl(fetched.finalUrl),
-          http_status: fetched.statusCode,
-          content_type: fetched.contentType,
-          response_bytes: fetched.body.byteLength,
-          page_description: extracted.description,
-          headings: extracted.headings,
-          text_excerpt: extracted.text,
-        },
-        observed_at: new Date().toISOString(),
-      }).select('id, public_id, source_id, website_scan_id').single()
+    let observationResult
+    try {
+      observationResult = await supabase
+        .from('signal_observations')
+        .insert({
+          public_id: observationPublicId,
+          source_id: source.id,
+          website_scan_id: existingScan.id,
+          source_event_id: `website_scan:${existingScan.public_id}`,
+          severity: 'low',
+          category: OBSERVATION_CATEGORY,
+          title: extracted.title,
+          description: description.slice(0, 5000),
+          metadata: {
+            version: 2,
+            coverage: 'partial',
+            scope: 'website_origin',
+            limitations: [...analysis.limitations, 'Existing website storage targets the origin; submitted path/query is not snapshotted by the database.'],
+            evidence: analysis.evidence,
+            ai,
+            fetched_url: normalizeFetchedUrl(fetched.finalUrl),
+            http_status: fetched.statusCode,
+            content_type: fetched.contentType,
+            response_bytes: fetched.body.byteLength,
+            page_description: extracted.description,
+            headings: extracted.headings,
+            text_excerpt: extracted.text,
+          },
+          observed_at: new Date().toISOString(),
+        }).select('id, public_id, source_id, website_scan_id').single()
+    } catch (error) {
+      logObservationFailure('signal_observations.insert_returning', scanId, error)
+      throw new WebsiteScanError('The website observation could not be saved.')
+    }
 
-    if (observationError || !persistedObservation?.id || persistedObservation.public_id !== observationPublicId ||
+    const { data: persistedObservation, error: observationError } = observationResult
+    if (observationError) {
+      logObservationFailure('signal_observations.insert_returning', scanId, observationError)
+      throw new WebsiteScanError('The website observation could not be saved.')
+    }
+    if (!persistedObservation?.id || persistedObservation.public_id !== observationPublicId ||
         persistedObservation.source_id !== source.id || persistedObservation.website_scan_id !== existingScan.id) {
-      console.error('[WebsiteScanProcessor] Failed persisting observation.', {
-        scanId,
-        code: observationError?.code, message: observationError?.message, details: observationError?.details,
+      logObservationFailure('signal_observations.verify_returned_row', scanId, {
+        code: persistedObservation?.id ? 'OBSERVATION_RESULT_MISMATCH' : 'OBSERVATION_RESULT_MISSING',
+        message: persistedObservation?.id
+          ? 'Returned observation identifiers did not match the inserted observation, source and scan.'
+          : 'Observation insertion returned no verifiable row identifier.',
       })
       throw new WebsiteScanError('The website observation could not be saved.')
     }

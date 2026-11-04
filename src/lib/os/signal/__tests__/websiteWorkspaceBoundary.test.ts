@@ -6,6 +6,8 @@ jest.mock('@/components/os/workspace/WorkspaceProvider', () => ({ useWorkspace: 
 
 import WorkspaceSignalEntry from '@/components/os/workspace/WorkspaceSignalEntry'
 import { useWorkspace } from '@/components/os/workspace/WorkspaceProvider'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 
 it('uses a distinct React state boundary for each active workspace', () => {
   jest.mocked(useWorkspace).mockReturnValue({ workspace: { id: 'workspace-a' } } as never)
@@ -15,4 +17,12 @@ it('uses a distinct React state boundary for each active workspace', () => {
   expect(first.key).toBe('workspace-a')
   expect(second.key).toBe('workspace-b')
   expect(second.type).toBe(first.type)
+})
+
+it('renders Quick Scan without revealing Full Audit before server activation', () => {
+  jest.mocked(useWorkspace).mockReturnValue({ workspace: { id: 'workspace-a', name: 'Workspace A', website_url: '' } } as never)
+  const html = renderToStaticMarkup(createElement(WorkspaceSignalEntry))
+  expect(html).toContain('Primary website')
+  expect(html).not.toContain('Full Website Audit')
+  expect(html).not.toContain('Website scan mode')
 })

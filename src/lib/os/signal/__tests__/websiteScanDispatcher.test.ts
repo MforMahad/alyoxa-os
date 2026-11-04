@@ -1,6 +1,8 @@
 import { jest } from '@jest/globals'
 import {
   dispatchOldestQueuedWebsiteScan,
+  dispatchCoordinatedQueuedWebsiteScan,
+  WebsiteScanDispatchBudget,
   type QueuedWebsiteScan,
   type WebsiteScanDispatchFailureUpdate,
   type WebsiteScanQueueClient,
@@ -38,6 +40,7 @@ function createQueueClient(scans: QueuedWebsiteScan[]) {
       return selectQuery
     }),
     maybeSingle,
+    abortSignal: jest.fn(() => selectQuery),
   }
 
   const updateCalls: RecordedUpdate[] = []
@@ -55,7 +58,8 @@ function createQueueClient(scans: QueuedWebsiteScan[]) {
       }),
       select: jest.fn((columns: 'id') => {
         expect(columns).toBe('id')
-        return { maybeSingle: updateMaybeSingle }
+        const resultQuery = { maybeSingle: updateMaybeSingle, abortSignal: jest.fn(() => resultQuery) }
+        return resultQuery
       }),
     }
     updateCalls.push({ values, eqCalls })
@@ -69,7 +73,7 @@ function createQueueClient(scans: QueuedWebsiteScan[]) {
     })),
   }
 
-  return { queueClient, selectQuery, update, updateCalls }
+  return { queueClient, selectQuery, update, updateCalls, updateMaybeSingle }
 }
 
 describe('dispatchOldestQueuedWebsiteScan', () => {
@@ -77,7 +81,9 @@ describe('dispatchOldestQueuedWebsiteScan', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
   })
+  afterEach(() => jest.restoreAllMocks())
 
   it('does not dispatch when the queue is empty', async () => {
     const { queueClient } = createQueueClient([])
@@ -179,7 +185,7 @@ describe('dispatchOldestQueuedWebsiteScan', () => {
     ])
   })
 
-  it('marks the scan failed when the dispatch request throws before a response is received', async () => {
+  it('preserves queued work when a request fails without a response', async () => {
     const scan = { id: 'scan-1', created_at: '2026-09-28T10:00:00Z' }
     const { queueClient, updateCalls } = createQueueClient([scan])
     const failingFetch = jest.fn(async () => {
@@ -193,13 +199,8 @@ describe('dispatchOldestQueuedWebsiteScan', () => {
       fetchImpl: failingFetch,
     })
 
-    expect(result).toEqual({ status: 'dispatch_failed', scanId: 'scan-1' })
-    expect(updateCalls).toHaveLength(1)
-    expect(updateCalls[0].values.status).toBe('failed')
-    expect(updateCalls[0].eqCalls).toEqual([
-      ['id', 'scan-1'],
-      ['status', 'queued'],
-    ])
+    expect(result).toEqual({ status: 'dispatch_uncertain', scanId: 'scan-1', stage: 'http', reason: 'request_error' })
+    expect(updateCalls).toHaveLength(0)
   })
 
   it('does not permanently block newer queued scans behind a failing oldest scan', async () => {
@@ -249,25 +250,11 @@ describe('dispatchOldestQueuedWebsiteScan', () => {
   })
 
   it('still returns queue_error without attempting a dispatch when the queue query fails', async () => {
-    const { queueClient, update } = createQueueClient([])
-    queueClient.from = jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          order: jest.fn(() => ({
-            limit: jest.fn(() => ({
-              maybeSingle: jest.fn(async () => ({
-                data: null,
-                error: { code: '500' },
-              })),
-            })),
-          })),
-        })),
-      })),
-      update,
-    }))
+    const broken = createQueueClient([])
+    broken.selectQuery.maybeSingle.mockResolvedValueOnce({ data: null, error: { code: '500' } } as never)
 
     const result = await dispatchOldestQueuedWebsiteScan({
-      queueClient,
+      queueClient: broken.queueClient,
       appUrl: 'https://alyoxa.example',
       triggerSecret: 'test-secret',
       fetchImpl,
@@ -275,6 +262,84 @@ describe('dispatchOldestQueuedWebsiteScan', () => {
 
     expect(result).toEqual({ status: 'queue_error', code: '500' })
     expect(fetchImpl).not.toHaveBeenCalled()
-    expect(update).not.toHaveBeenCalled()
+    expect(broken.update).not.toHaveBeenCalled()
+  })
+})
+
+describe('total Quick Scan dispatch budget', () => {
+  const scan = { id: 'scan-budget', created_at: '2026-11-04T00:00:00Z' }
+  beforeEach(() => {
+    jest.useFakeTimers()
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+  afterEach(() => { jest.useRealTimers(); jest.restoreAllMocks() })
+
+  it.each([false, true])('bounds lookup plus HTTP to 25 seconds (coordinated=%s)', async coordinated => {
+    const started = Date.now()
+    const queue = createQueueClient([scan])
+    queue.selectQuery.maybeSingle.mockImplementationOnce(() => new Promise(resolve => setTimeout(() => resolve({ data: scan, error: null }), 7000)))
+    const rpc = jest.fn(() => ({ abortSignal: jest.fn(() => new Promise<{ data: string; error: null }>(resolve => setTimeout(() => resolve({ data: scan.id, error: null }), 7000))) }))
+    let signal: AbortSignal | undefined
+    const fetchImpl = jest.fn((_input: string | URL | Request, init?: RequestInit) => { signal = init?.signal as AbortSignal; return new Promise<never>(() => {}) })
+    const options = { appUrl: 'https://dispatch.example.org', triggerSecret: 'must-not-log', fetchImpl }
+    let settled = false
+    const pending = (coordinated ? dispatchCoordinatedQueuedWebsiteScan({ ...options, queueClient: { rpc } }) : dispatchOldestQueuedWebsiteScan({ ...options, queueClient: queue.queueClient })).then(result => { settled = true; return result })
+    await jest.advanceTimersByTimeAsync(7000)
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+    expect(signal?.aborted).toBe(false)
+    await jest.advanceTimersByTimeAsync(17999)
+    expect(settled).toBe(false)
+    await jest.advanceTimersByTimeAsync(1)
+    expect(await pending).toEqual({ status: 'dispatch_uncertain', scanId: scan.id, stage: 'http', reason: 'timeout' })
+    expect(Date.now() - started).toBe(25000)
+    expect(signal?.aborted).toBe(true)
+    expect(queue.update).not.toHaveBeenCalled()
+    expect(console.warn).toHaveBeenCalled()
+    expect(JSON.stringify(jest.mocked(console.warn).mock.calls)).not.toContain('must-not-log')
+    expect(JSON.stringify(jest.mocked(console.warn).mock.calls)).not.toContain('https://')
+  })
+
+  it.each([false, true])('aborts a stalled queue lookup without dispatching (coordinated=%s)', async coordinated => {
+    const queue = createQueueClient([scan])
+    queue.selectQuery.maybeSingle.mockImplementationOnce(() => new Promise<never>(() => {}))
+    let rpcSignal: AbortSignal | undefined
+    const rpc = jest.fn(() => ({ abortSignal: jest.fn((signal: AbortSignal) => { rpcSignal = signal; return new Promise<never>(() => {}) }) }))
+    const fetchImpl = jest.fn(async () => ({ ok: true, status: 200 }))
+    const options = { appUrl: 'https://dispatch.example.org', triggerSecret: 'test-only', fetchImpl }
+    const pending = coordinated ? dispatchCoordinatedQueuedWebsiteScan({ ...options, queueClient: { rpc } }) : dispatchOldestQueuedWebsiteScan({ ...options, queueClient: queue.queueClient })
+    await jest.advanceTimersByTimeAsync(25000)
+    expect(await pending).toEqual({ status: 'dispatch_uncertain', stage: 'queue', reason: 'timeout' })
+    expect(coordinated ? rpcSignal?.aborted : queue.selectQuery.abortSignal.mock.calls[0][0].aborted).toBe(true)
+    expect(fetchImpl).not.toHaveBeenCalled()
+    expect(queue.update).not.toHaveBeenCalled()
+  })
+
+  it('shares the same deadline with legacy rejection bookkeeping', async () => {
+    const queue = createQueueClient([scan])
+    queue.selectQuery.maybeSingle.mockImplementationOnce(() => new Promise(resolve => setTimeout(() => resolve({ data: scan, error: null }), 7000)))
+    queue.updateMaybeSingle.mockImplementationOnce(() => new Promise<never>(() => {}))
+    const fetchImpl = jest.fn(() => new Promise<{ ok: boolean; status: number }>(resolve => setTimeout(() => resolve({ ok: false, status: 500 }), 10000)))
+    const pending = dispatchOldestQueuedWebsiteScan({ queueClient: queue.queueClient, appUrl: 'https://dispatch.example.org', triggerSecret: 'test-only', fetchImpl })
+    await jest.advanceTimersByTimeAsync(25000)
+    expect(await pending).toEqual({ status: 'dispatch_uncertain', scanId: scan.id, stage: 'cleanup', reason: 'timeout' })
+    // One conditional write follows a definitive HTTP rejection; no second write
+    // is issued when that write's own response becomes uncertain.
+    expect(queue.update).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not begin lookup or HTTP after the function budget has expired', async () => {
+    const budget = new WebsiteScanDispatchBudget()
+    await jest.advanceTimersByTimeAsync(25000)
+    const queue = createQueueClient([scan])
+    const fetchImpl = jest.fn(async () => ({ ok: true, status: 200 }))
+    expect(await dispatchOldestQueuedWebsiteScan({ budget, queueClient: queue.queueClient, appUrl: 'https://dispatch.example.org', triggerSecret: 'test-only', fetchImpl })).toMatchObject({ status: 'dispatch_uncertain', stage: 'queue', reason: 'timeout' })
+    expect(queue.queueClient.from).not.toHaveBeenCalled()
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  it.each([408, 504])('preserves queued work on an HTTP %s timeout response', async status => {
+    const queue = createQueueClient([scan])
+    expect(await dispatchOldestQueuedWebsiteScan({ queueClient: queue.queueClient, appUrl: 'https://dispatch.example.org', triggerSecret: 'test-only', fetchImpl: async () => ({ ok: false, status }) })).toMatchObject({ status: 'dispatch_uncertain', reason: 'timeout' })
+    expect(queue.update).not.toHaveBeenCalled()
   })
 })

@@ -3,7 +3,8 @@ import type { PersistedSignalObservationContext } from '@/data/os/ai/aiCore'
 
 /** Pure persisted-data boundary; imports no fixture registries at runtime. */
 export function buildWebsiteContexts(observations: PersistedSignalObservation[]): PersistedSignalObservationContext[] {
-  return observations.map(observation => ({
+  return observations.filter(observation => !observation.metadata || typeof observation.metadata !== 'object' ||
+    (observation.metadata as Record<string, unknown>).record_kind !== 'audit_page').map(observation => ({
     id: `CTX-PERSISTED-SIGNAL-OBS-${observation.public_id}`,
     type: 'PERSISTED_SIGNAL_OBSERVATION', sourceModule: 'SIGNAL',
     summary: observation.description, timestamp: observation.observed_at,

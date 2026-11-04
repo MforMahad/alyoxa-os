@@ -10,17 +10,21 @@ import { recommendWebsiteImprovements } from '../websiteRecommendations'
 
 const scanId = '629126b4-1bc9-4d5f-a100-d170fe534c5b'
 
-function harness(options: { insertError?: boolean; missingReturnedRow?: boolean; wrongSource?: boolean; missingSource?: boolean; completionError?: boolean; status?: string } = {}) {
+function harness(options: { insertError?: boolean; persistenceError?: Record<string, unknown>; insertThrows?: Error; missingReturnedRow?: boolean; wrongSource?: boolean; missingSource?: boolean; completionError?: boolean; status?: string } = {}) {
   const events: string[] = []
+  const observationSelects: string[] = []
   let inserted: Record<string, unknown> = {}
   const from = jest.fn((table: string) => {
     let values: Record<string, unknown> | undefined
     let operation = 'read'
     const query = {
-      select: jest.fn(() => query), eq: jest.fn(() => query),
+      select: jest.fn((columns: string) => { if (table === 'signal_observations') observationSelects.push(columns); return query }), eq: jest.fn(() => query),
       insert: jest.fn((row: Record<string, unknown>) => { operation = 'insert'; inserted = row; events.push('observation_insert'); return query }),
       update: jest.fn((row: Record<string, unknown>) => { operation = 'update'; values = row; events.push(String(row.status)); return query }),
-      single: jest.fn(async () => ({ data: options.missingReturnedRow ? null : { ...inserted, id: 'observation-id', ...(options.wrongSource ? { source_id: 'other-tenant-source' } : {}) }, error: options.insertError ? { code: '42501', message: 'Denied' } : null })),
+      single: jest.fn(async () => {
+        if (options.insertThrows) throw options.insertThrows
+        return { data: options.missingReturnedRow ? null : { ...inserted, id: 'observation-id', ...(options.wrongSource ? { source_id: 'other-tenant-source' } : {}) }, error: options.persistenceError ?? (options.insertError ? { code: '42501', message: 'Denied' } : null) }
+      }),
       maybeSingle: jest.fn(async () => {
         if (table === 'website_scans' && operation === 'read') return { data: { id: scanId, public_id: 'scan_public', website_id: 'website-id', status: options.status ?? 'queued' }, error: null }
         if (table === 'website_scans') return { data: options.completionError && values?.status === 'completed' ? null : { id: scanId }, error: null }
@@ -32,7 +36,7 @@ function harness(options: { insertError?: boolean; missingReturnedRow?: boolean;
     return query
   })
   jest.mocked(createServiceRoleClient).mockReturnValue({ from } as never)
-  return { events, from, inserted: () => inserted }
+  return { events, from, observationSelects, inserted: () => inserted }
 }
 
 beforeEach(() => {
@@ -47,6 +51,8 @@ it('persists measured evidence and verified source/scan IDs before completing', 
   const h = harness()
   expect((await processWebsiteScan(scanId)).status).toBe('completed')
   expect(h.events).toEqual(['processing', 'observation_insert', 'completed'])
+  expect(createServiceRoleClient).toHaveBeenCalledTimes(1)
+  expect(h.observationSelects).toEqual(['id, public_id, source_id, website_scan_id'])
   expect(h.inserted()).toMatchObject({ source_id: 'source-id', website_scan_id: scanId, source_event_id: 'website_scan:scan_public', title: 'Real page', metadata: { version: 2, coverage: 'partial', ai: { status: 'unavailable' }, evidence: expect.arrayContaining([expect.objectContaining({ id: 'h1', value: 1 })]) } })
 })
 it.each([{ insertError: true }, { missingReturnedRow: true }, { wrongSource: true }])('never completes unverified persistence: %j', async options => {
@@ -77,4 +83,37 @@ it('does not pretend to repair historical completed scans by rerunning them', as
   const h = harness({ status: 'completed' })
   expect(await processWebsiteScan(scanId)).toEqual({ status: 'skipped', reason: 'not_queued' })
   expect(h.events).toEqual([])
+})
+it('logs the original database error and hint exactly once without exposing it in the result', async () => {
+  const error = { code: '42501', message: 'permission denied for table signal_observations', details: 'SELECT privilege is required for returned columns.', hint: 'Inspect effective worker privileges.', authorization: 'must-not-log', cookies: 'must-not-log' }
+  const h = harness({ persistenceError: error })
+  const result = await processWebsiteScan(scanId)
+  expect(result).toEqual({ status: 'failed', scanId })
+  expect(h.events).not.toContain('completed')
+  expect(console.error).toHaveBeenCalledTimes(1)
+  expect(console.error).toHaveBeenCalledWith('[WebsiteScanProcessor] Failed persisting observation.', {
+    operation: 'signal_observations.insert_returning', scanId,
+    code: error.code, message: error.message, details: error.details, hint: error.hint,
+  })
+  expect(JSON.stringify(jest.mocked(console.error).mock.calls)).not.toContain('must-not-log')
+})
+it.each([{ missingReturnedRow: true }, { wrongSource: true }])('distinguishes verification failures from database rejections: %j', async options => {
+  harness(options)
+  expect((await processWebsiteScan(scanId)).status).toBe('failed')
+  expect(console.error).toHaveBeenCalledTimes(1)
+  expect(jest.mocked(console.error).mock.calls[0][1]).toMatchObject({
+    operation: 'signal_observations.verify_returned_row', scanId,
+    code: options.missingReturnedRow ? 'OBSERVATION_RESULT_MISSING' : 'OBSERVATION_RESULT_MISMATCH',
+    details: null, hint: null,
+  })
+})
+it('preserves a thrown insert exception in safe server diagnostics instead of losing it in the outer catch', async () => {
+  const h = harness({ insertThrows: new Error('Transport failure with Bearer test-secret') })
+  expect(await processWebsiteScan(scanId)).toEqual({ status: 'failed', scanId })
+  expect(h.events).not.toContain('completed')
+  expect(console.error).toHaveBeenCalledTimes(1)
+  expect(jest.mocked(console.error).mock.calls[0][1]).toMatchObject({
+    operation: 'signal_observations.insert_returning', scanId,
+    message: 'Transport failure with Bearer [REDACTED]',
+  })
 })

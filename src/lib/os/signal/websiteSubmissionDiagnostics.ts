@@ -1,4 +1,4 @@
-function diagnosticText(value: unknown): string | null {
+export function diagnosticText(value: unknown): string | null {
   if (typeof value !== 'string') return null
   // Database messages may echo input. Keep SQL diagnostics but exclude URLs and credentials.
   return value

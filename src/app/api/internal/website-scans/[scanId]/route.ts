@@ -36,6 +36,7 @@ export async function POST(
   if (result.status === 'completed') {
     return NextResponse.json(result)
   }
+  if (result.status === 'deferred') return NextResponse.json(result, { status: 202 })
 
   if (result.status === 'skipped') {
     const status =

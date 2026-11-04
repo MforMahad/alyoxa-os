@@ -30,11 +30,28 @@ import {
 } from "@/lib/os/signal/overviewScanStatus";
 
 import { useWorkspace } from "./WorkspaceProvider";
+import { getWebsiteAuditCapabilities } from "@/actions/signal/getWebsiteAuditStatus";
+import WebsiteAuditPanel from "./WebsiteAuditPanel";
 
 export default function WorkspaceSignalEntry() {
   const { workspace } = useWorkspace();
+  return <WorkspaceScanModes key={workspace?.id ?? "no-workspace"} />;
+}
+
+function WorkspaceScanModes() {
+  const { workspace } = useWorkspace();
+  const [auditsEnabled, setAuditsEnabled] = useState(false);
+  const [mode, setMode] = useState("quick");
+  useEffect(() => {
+    let cancelled = false;
+    void getWebsiteAuditCapabilities().then(value => { if (!cancelled) setAuditsEnabled(value.enabled); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
   // Reset domain-keyed state and in-flight requests at the workspace boundary.
-  return <WorkspaceSignalEntryContent key={workspace?.id ?? "no-workspace"} />;
+  return <>
+    {auditsEnabled && <label className="block font-mono text-xs mb-3">Scan mode <select aria-label="Website scan mode" value={mode} onChange={e => setMode(e.target.value)} className="border p-2 bg-[var(--background)]"><option value="quick">Quick Scan</option><option value="full">Full Website Audit</option></select></label>}
+    {auditsEnabled && mode === "full" ? <WebsiteAuditPanel key={workspace?.id ?? "no-workspace"} /> : <WorkspaceSignalEntryContent key={workspace?.id ?? "no-workspace"} />}
+  </>;
 }
 
 function WorkspaceSignalEntryContent() {
