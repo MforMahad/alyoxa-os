@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getActiveWorkspace } from '@/actions/workspaces/getActiveWorkspace'
 import { auditCreationEnabled, sharedCrawlEnabled } from '@/lib/os/signal/audit/contracts'
+import { buildWebsiteIssueReport } from '@/lib/os/signal/websiteIssues'
 
 export async function getWebsiteAuditCapabilities() {
   return { enabled: auditCreationEnabled() && sharedCrawlEnabled() }
@@ -30,8 +31,10 @@ export async function getWebsiteAuditStatus(workspaceId: string, auditId?: strin
     : { data: [], error: null }
   if (evidenceError) return { success: false as const, error: 'Retained audit evidence unavailable.' }
   const metadata = new Map((observations ?? []).map(o => [o.id, o.metadata as Record<string, unknown>]))
+  const retainedPages = (pages ?? []).map(p => ({ ...p, metadata: metadata.get(p.observation_id) ?? null }))
+  const summary = metadata.get(audit.summary_observation_id) ?? null
   return { success: true as const, history: history ?? [], data: {
-    ...audit, pages: (pages ?? []).map(p => ({ ...p, metadata: metadata.get(p.observation_id) ?? null })),
-    summary: metadata.get(audit.summary_observation_id) ?? null,
+    ...audit, pages: retainedPages, summary,
+    issueReport: buildWebsiteIssueReport(retainedPages, summary),
   } }
 }

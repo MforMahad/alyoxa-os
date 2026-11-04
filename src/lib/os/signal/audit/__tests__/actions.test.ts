@@ -34,3 +34,34 @@ it('rejects a different active workspace before reading audit data', async () =>
   expect((await getWebsiteAuditStatus(input.workspaceId)).success).toBe(false)
   expect(createClient).not.toHaveBeenCalled()
 })
+
+it('derives issues only from the selected authorized audit and preserves raw evidence and history', async () => {
+  jest.mocked(getActiveWorkspace).mockResolvedValue({ success: true, data: { id: input.workspaceId } } as never)
+  const raw = { evidence: [{ id: 'title', value: '' }], ai: { status: 'unavailable' } }
+  const queries: { table: string; eq: jest.Mock }[] = []
+  const responses = [
+    { data: [{ id: 'selected', start_url: input.websiteUrl }] },
+    { data: { id: 'selected', summary_observation_id: 'summary' } },
+    { data: [{ id: 'page', url: input.websiteUrl, status: 'completed', observation_id: 'obs' }] },
+    { data: [{ id: 'obs', metadata: raw }, { id: 'summary', metadata: { findings: { missing_titles: 1 } } }] },
+  ]
+  const from = jest.fn((table: string) => {
+    const response = responses.shift()
+    const query = { select: jest.fn(), eq: jest.fn(), order: jest.fn(), limit: jest.fn(), maybeSingle: jest.fn(), in: jest.fn(),
+      then: (resolve: (value: unknown) => unknown) => Promise.resolve(response).then(resolve) }
+    for (const key of ['select', 'eq', 'order', 'limit', 'maybeSingle', 'in'] as const) query[key].mockReturnValue(query)
+    queries.push({ table, eq: query.eq })
+    return query
+  })
+  jest.mocked(createClient).mockResolvedValue({ from } as never)
+  const result = await getWebsiteAuditStatus(input.workspaceId, 'selected')
+  expect(result.success).toBe(true)
+  if (!result.success || !result.data) throw new Error('Expected authorized audit result')
+  expect(result.data.issueReport.groups[0].affectedUrls).toEqual([input.websiteUrl])
+  expect(result.data.pages[0].metadata).toEqual(raw)
+  expect(result.history[0].id).toBe('selected')
+  expect(queries[1].eq).toHaveBeenCalledWith('id', 'selected')
+  expect(queries[1].eq).toHaveBeenCalledWith('workspace_id', input.workspaceId)
+  expect(queries[2].eq).toHaveBeenCalledWith('audit_id', 'selected')
+  expect(queries[2].eq).toHaveBeenCalledWith('workspace_id', input.workspaceId)
+})
