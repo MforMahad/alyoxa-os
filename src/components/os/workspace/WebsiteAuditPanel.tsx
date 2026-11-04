@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react'
 import { submitWebsiteAudit } from '@/actions/signal/submitWebsiteAudit'
 import { getWebsiteAuditStatus } from '@/actions/signal/getWebsiteAuditStatus'
 import { useWorkspace } from './WorkspaceProvider'
+import { WebsiteIssueSummary } from './WebsiteIssueSummary'
 
 type Result = Awaited<ReturnType<typeof getWebsiteAuditStatus>>
 export default function WebsiteAuditPanel() {
@@ -66,27 +67,7 @@ export default function WebsiteAuditPanel() {
       <p>{data.pages.length} unique candidate URLs retained. Undiscovered pages: unknown. Coverage remains partial.{data.discovery_truncated ? ' Discovery was truncated.' : ''}</p>
       {data.last_finalize_error_code && <p>Summary persistence is awaiting retry; the audit is not complete.</p>}
       {findings && <p>Across {findings.denominator_completed_pages} retained pages: {findings.missing_titles} missing titles ({findings.measured_titles} measured), {findings.missing_descriptions} missing descriptions ({findings.measured_descriptions} measured).</p>}
-      <div className="border border-[var(--border)] p-3 space-y-3">
-        <h3>Website issues</h3>
-        <p>{data.issueReport.coverage.analyzedPages} unique analyzed URLs with retained metadata out of {data.issueReport.coverage.completedPages} completed page rows; {data.issueReport.coverage.candidatePages} candidates retained. Coverage is partial.</p>
-        <p>Severity is a review priority. Confidence refers to the HTML measurement, not its business impact.</p>
-        {data.issueReport.limitations.map(text => <p key={text}>{text}</p>)}
-        {!data.issueReport.groups.some(group => group.issues.length) && <p>No supported issues detected in available measurements. This is not a clean-site assessment.</p>}
-        {data.issueReport.groups.map(group => <details key={group.ruleId} className="border-t py-2">
-          <summary>{group.title}: {group.affectedUrls.length} affected / {group.measuredPages} measured pages; {group.unknownPages} unknown — {group.severity}</summary>
-          <p>{group.recommendedFix}</p>
-          <ul className="space-y-2">{group.issues.map(issue => <li key={issue.affectedUrl} className="break-words">
-            <p>{issue.affectedUrl} · Confidence: {issue.confidence}</p>
-            <p>Evidence: {issue.evidenceReferences.map(ref => `${ref.evidenceId}=${String(ref.value)} (${ref.observationId})`).join('; ')}</p>
-            {issue.limitations.map(text => <p key={text}>{text}</p>)}
-          </li>)}</ul>
-        </details>)}
-        {data.issueReport.resources.length > 0 && <details className="border-t py-2">
-          <summary>Site-resource evidence ({data.issueReport.resources.length} distinct results; separate from page issues)</summary>
-          <p>Missing, restricted or unavailable resources need review; they do not by themselves establish a website defect.</p>
-          <ul>{data.issueReport.resources.map(resource => <li key={JSON.stringify(resource)} className="break-words">{resource.url}: {resource.status}; HTTP {resource.httpStatus ?? 'not recorded'}</li>)}</ul>
-        </details>}
-      </div>
+      <WebsiteIssueSummary report={data.issueReport} />
       <div className="max-h-96 overflow-auto">{data.pages.map(page => <details key={page.id} className="border-t py-2">
         <summary>{page.final_url ?? page.url} — {page.status}{!page.admitted ? ' (outside admission budget)' : ''}</summary>
         {page.reason && <p>{page.reason}</p>}
