@@ -9,7 +9,12 @@ import {
   type WebsiteScanQueueClient,
 } from '../../src/lib/os/signal/websiteScanDispatcher'
 
-export default async function dispatchWebsiteScans(): Promise<void> {
+// Temporary production pause. Restore this guard and the schedule together.
+const DISPATCH_PAUSED = true
+
+export default async function dispatchWebsiteScans(): Promise<void | Response> {
+  if (DISPATCH_PAUSED) return new Response('Scan dispatch temporarily paused.', { status: 503 })
+
   const budget = new WebsiteScanDispatchBudget()
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -67,6 +72,4 @@ export default async function dispatchWebsiteScans(): Promise<void> {
   })
 }
 
-export const config: Config = {
-  schedule: '* * * * *',
-}
+export const config: Config = {}
