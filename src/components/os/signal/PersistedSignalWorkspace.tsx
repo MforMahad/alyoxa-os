@@ -1,100 +1,13 @@
+import Link from 'next/link'
 import { WebsiteObservationDetails } from './WebsiteObservationDetails'
-import type {
-  PersistedSignalFeedSource,
-  PersistedSignalObservation,
-} from '@/data/os/signal'
-
-interface PersistedSignalWorkspaceProps {
-  activeTab: 'live_stream' | 'sources'
-  observations: PersistedSignalObservation[]
-  sources: PersistedSignalFeedSource[]
-  observationError?: string
-  sourceError?: string
-}
-
-export function PersistedSignalWorkspace({
-  activeTab,
-  observations,
-  sources,
-  observationError,
-  sourceError,
-}: PersistedSignalWorkspaceProps) {
-  if (activeTab === 'sources') {
-    return (
-      <section className="border border-[var(--border)] bg-[var(--surface)]/10 font-mono text-xs">
-        <div className="border-b border-[var(--border)]/40 bg-[var(--surface)]/30 px-4 py-2 text-[10px] uppercase tracking-widest text-[var(--muted)]">
-          Persisted Workspace Sources ({sourceError ? 'UNAVAILABLE' : sources.length})
-        </div>
-        {sourceError ? (
-          <div className="p-8 text-center text-[var(--muted)]">Signal sources are unavailable.</div>
-        ) : sources.length === 0 ? (
-          <div className="p-8 text-center text-[var(--muted)]">No persisted Signal sources for this workspace.</div>
-        ) : (
-          <div className="divide-y divide-[var(--border)]/40">
-            {sources.map((source) => (
-              <article key={source.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-1">
-                  <h2 className="font-bold text-[var(--foreground)]">{source.name}</h2>
-                  <p className="text-[10px] uppercase text-[var(--muted)]">
-                    {source.source_type}{source.source_key ? ` // ${source.source_key}` : ''}
-                  </p>
-                  {source.description && <p className="text-[11px] text-[var(--muted)]">{source.description}</p>}
-                </div>
-                <div className="text-[10px] text-[var(--muted)] sm:text-right">
-                  <div>RECORDED STATUS: {source.status}</div>
-                  <time dateTime={source.created_at}>CREATED: {source.created_at}</time>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-    )
-  }
-
-  const sourceNames = new Map(sources.map((source) => [source.id, source.name]))
-
-  return (
-    <section className="border border-[var(--border)] bg-[var(--surface)]/10 font-mono text-xs">
-      <div className="flex items-center justify-between border-b border-[var(--border)]/40 bg-[var(--surface)]/30 px-4 py-2 text-[10px] uppercase tracking-widest text-[var(--muted)]">
-        <span>Persisted Website Observations ({observationError ? 'UNAVAILABLE' : observations.length})</span>
-        <span>OBSERVED AT</span>
-      </div>
-      {observationError ? (
-        <div className="p-8 text-center text-[var(--muted)]">Persisted Signal observations are unavailable.</div>
-      ) : observations.length === 0 ? (
-        <div className="space-y-1 p-8 text-center text-[var(--muted)]">
-          <div>No persisted website observations yet.</div>
-          <div className="text-[10px]">Observations will appear here after a workspace website scan is recorded.</div>
-        </div>
-      ) : (
-        <div className="divide-y divide-[var(--border)]/40">
-          {observations.map((observation) => (
-            <article key={observation.id} className="space-y-2 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="border border-[var(--border)] px-1.5 py-0.5 text-[10px] text-[var(--muted)]">
-                    {observation.severity.toUpperCase()}
-                  </span>
-                  <span className="text-[10px] uppercase text-[var(--muted)]">
-                    {sourceNames.get(observation.source_id) ?? 'Persisted Signal source'} {'//'} {observation.category}
-                  </span>
-                </div>
-                <time className="text-[10px] text-[var(--muted)]" dateTime={observation.observed_at}>
-                  {observation.observed_at}
-                </time>
-              </div>
-              <h2 className="font-bold text-[var(--foreground)]">{observation.title}</h2>
-              <p>Scan: {observation.website_scan_id ?? 'Not recorded'} ? Observation: {observation.public_id}</p>
-              <WebsiteObservationDetails metadata={observation.metadata} />
-              <p className="text-[11px] leading-relaxed text-[var(--muted)]">{observation.description}</p>
-            </article>
-          ))}
-        </div>
-      )}
-      <div className="border-t border-[var(--border)]/40 px-4 py-2 text-[10px] text-[var(--muted)]">
-        SOURCE: PERSISTED WORKSPACE RECORDS
-      </div>
-    </section>
-  )
+import type { PersistedSignalFeedSource, PersistedSignalObservation } from '@/data/os/signal'
+interface Props { activeTab: 'live_stream' | 'sources'; observations: PersistedSignalObservation[]; sources: PersistedSignalFeedSource[]; observationError?: string; sourceError?: string }
+export function PersistedSignalWorkspace({ activeTab, observations, sources, observationError, sourceError }: Props) {
+ if(activeTab==='sources') return <div className="os-website-list"><h2>Websites and connections</h2><p>These records identify the websites and other sources saved in this workspace. A connection record does not prove a website is currently reachable.</p>
+  {sourceError ? <p role="alert">{sourceError} Reload the page to try again.</p> : !sources.length ? <div className="os-empty-state"><h3>No websites connected yet</h3><p>Check a website to add it to this workspace and save its first measurements.</p><Link href="/app#website-checks" className="os-button os-button-teal">Add a website</Link></div> : sources.map(source=><article className="os-website-row" key={source.id}><div><h3>{source.source_key?.startsWith('website:') ? source.source_key.slice(8) : source.name}</h3><p>{source.source_type==='website' ? 'Website saved in this workspace. View its previous checks or start another.' : 'An additional saved connection. Its technical details are available below.'}</p><details><summary>Technical details</summary><p>Record type: {source.source_type}. Recorded connection status: {source.status}.</p><p>{source.source_key}</p>{source.description && <p>{source.description}</p>}<time dateTime={source.created_at}>Added: {source.created_at}</time></details></div>{source.source_type==='website' && <Link href={'/app/ai?website='+encodeURIComponent(source.id)} className="os-button os-button-outline">View saved results</Link>}</article>)}
+ </div>
+ const names=new Map(sources.map(source=>[source.id,source.name]))
+ return <div><h2>Saved measurements</h2><p>Measurements record what a check found. They are evidence, not a list of confirmed website problems. Open Reports &amp; Recommendations for supported issues and fixes.</p><Link href="/app/ai" className="os-text-link">View reports &amp; recommended fixes</Link>
+ {observationError ? <p role="alert">{observationError} Reload to try again.</p> : !observations.length ? <div className="os-empty-state"><h3>No saved measurements yet</h3><p>Start a website check to collect evidence.</p><Link href="/app#website-checks" className="os-text-link">Check a website</Link></div> : observations.map(observation=><article className="os-measurement-row" key={observation.id}><h3>{observation.title}</h3><p>{observation.description}</p><p className="os-subtle">{names.get(observation.source_id) ?? 'Saved website'} - {new Date(observation.observed_at).toLocaleString('en',{timeZone:'UTC'})} UTC</p><details><summary>Technical details &amp; evidence</summary><p>Check: {observation.website_scan_id ?? 'Not recorded'}. Record: {observation.public_id}. Category: {observation.category}. Stored severity: {observation.severity}.</p><WebsiteObservationDetails metadata={observation.metadata} /></details></article>)}
+ </div>
 }

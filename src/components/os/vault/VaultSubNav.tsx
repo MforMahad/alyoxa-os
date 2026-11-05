@@ -1,46 +1,6 @@
-'use client';
-
-import React from 'react';
-import Link from 'next/link';
-
-export type VaultTab = 'assets' | 'knowledge' | 'search' | 'folders' | 'activity';
-
-interface VaultSubNavProps {
-  activeTab: VaultTab;
-  counts: {
-    assets: number;
-    knowledge: number;
-    folders: number;
-  };
+import { PageTabs } from '../shell/PageTabs'
+export type VaultTab = 'assets' | 'knowledge' | 'search' | 'folders' | 'activity'
+interface Props { activeTab: VaultTab; counts: { assets: number; knowledge: number; folders: number } }
+export function VaultSubNav({ activeTab }: Props) {
+ return <PageTabs label="Library views" active={activeTab} items={[{"id":"assets","label":"Files","href":"/app/vault?tab=assets"},{"id":"knowledge","label":"Saved information","href":"/app/vault?tab=knowledge"},{"id":"search","label":"Search","href":"/app/vault?tab=search"},{"id":"folders","label":"Folders","href":"/app/vault?tab=folders"},{"id":"activity","label":"Activity","href":"/app/vault?tab=activity"}]} />
 }
-
-export const VaultSubNav: React.FC<VaultSubNavProps> = ({ activeTab, counts }) => {
-  const tabs: { id: VaultTab; label: string }[] = [
-    { id: 'assets', label: `ASSETS [${String(counts.assets).padStart(2, '0')}]` },
-    { id: 'knowledge', label: `KNOWLEDGE [${String(counts.knowledge).padStart(2, '0')}]` },
-    { id: 'search', label: 'SEARCH' },
-    { id: 'folders', label: `FOLDERS [${String(counts.folders).padStart(2, '0')}]` },
-    { id: 'activity', label: 'ACTIVITY [FOUNDATION]' },
-  ];
-
-  return (
-    <nav className="w-full bg-[var(--surface)] border-b border-[var(--border)] px-6 flex items-center gap-6 font-mono text-xs h-10">
-      {tabs.map((tab) => {
-        const isActive = activeTab === tab.id;
-        return (
-          <Link
-            key={tab.id}
-            href={`/app/vault?tab=${tab.id}`}
-            className={`h-full flex items-center border-b-2 transition-colors font-medium text-[11px] ${
-              isActive
-                ? 'border-[var(--primary)] text-[var(--foreground)] font-bold'
-                : 'border-transparent text-[var(--muted)] hover:text-[var(--foreground)]'
-            }`}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-};

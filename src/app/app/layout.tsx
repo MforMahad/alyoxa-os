@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 
 import { getActiveWorkspace } from '@/actions/workspaces/getActiveWorkspace'
 import { WorkspaceProvider } from '@/components/os/workspace/WorkspaceProvider'
+import { OSAppShell } from '@/components/os/shell/OSAppShell'
 
 interface AppLayoutProps {
   children: ReactNode
@@ -16,7 +17,7 @@ export default async function AppLayout({
 
   return (
     <WorkspaceProvider workspace={workspace}>
-      {children}
+      <OSAppShell>{children}</OSAppShell>
     </WorkspaceProvider>
   )
 }

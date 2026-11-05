@@ -70,3 +70,4 @@ it('keeps empty sites and legacy evidence honest while excluding non-website sou
   expect(groups.find(g => g.id === 'source-a')?.runs[0].kind).toBe('observation')
   expect(groups.find(g => g.id === 'source-b')?.runs).toEqual([])
 })
+jest.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams() }))

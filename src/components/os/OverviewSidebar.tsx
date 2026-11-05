@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type MouseEvent } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { osNavigation, isOSNavigationActive } from './shell/navigation'
@@ -11,6 +11,14 @@ export function OverviewSidebar({ mobileOpen = false, onCloseMobile }: Props) {
   const pathname = usePathname()
   const hash = useLocationHash()
   const dialog = useRef<HTMLDialogElement>(null)
+  function navigate(event: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button === 0 && href.split('#')[0] === pathname && pathname === '/app') {
+      event.preventDefault()
+      window.history.pushState(null, '', href)
+      window.dispatchEvent(new HashChangeEvent('hashchange'))
+    }
+    onCloseMobile?.()
+  }
   useEffect(() => {
     const element = dialog.current
     if (mobileOpen && element && !element.open) element.showModal()
@@ -22,21 +30,23 @@ export function OverviewSidebar({ mobileOpen = false, onCloseMobile }: Props) {
     desktop.addEventListener('change', closeOnDesktop)
     return () => desktop.removeEventListener('change', closeOnDesktop)
   }, [onCloseMobile])
+  useEffect(() => {
+    const close = () => onCloseMobile?.()
+    window.addEventListener('popstate', close)
+    return () => window.removeEventListener('popstate', close)
+  }, [onCloseMobile])
   const content = <div className="os-sidebar-content">
-    <Link href="/app" className="os-brand" onClick={onCloseMobile} aria-label="ALYOXA OS overview"><span className="os-brand-mark" aria-hidden="true">A</span><span>ALYOXA <span className="os-brand-suffix">OS</span></span></Link>
-    <p className="os-sidebar-caption">A clearer way to work.</p>
+    <Link href="/app" className="os-brand" onClick={event => navigate(event, '/app')} aria-label="ALYOXA OS overview"><span className="os-brand-mark" aria-hidden="true">A</span><span>ALYOXA <span className="os-brand-suffix">OS</span></span></Link>
+    <p className="os-sidebar-caption">Websites, work and knowledge.</p>
     {osNavigation.map(group => <nav key={group.label} aria-label={group.label} className="os-nav-group">
       <p className="os-nav-label">{group.label}</p>
       {group.items.map(item => {
-        // Native anchors notify the hash subscriber and scroll to the audit
-        // panel; Next's pushState navigation need not emit hashchange.
-        const NavigationLink = item.href.includes('#') ? 'a' : Link
-        return <NavigationLink key={item.href} href={item.href} onClick={onCloseMobile}
+        return <Link key={item.href} href={item.href} scroll={false} onClick={event => navigate(event, item.href)}
         aria-current={isOSNavigationActive(item.href, pathname, hash) ? 'page' : undefined} className="os-nav-link">
         <OSIcon name={item.icon} className="os-nav-icon" /><span>{item.label}</span>
-      </NavigationLink>})}
+      </Link>})}
     </nav>)}
-    <div className="os-sidebar-footer"><span className="os-sidebar-dot" aria-hidden="true" />One workspace. More possibilities.</div>
+    <div className="os-sidebar-footer">ALYOXA OS · Your business workspace</div>
   </div>
   return <>
     <aside className="os-sidebar hidden lg:block">{content}</aside>

@@ -1,6 +1,6 @@
+import { PageHeader } from '@/components/os/shell/PageHeader'
+import { ExampleWorkspace } from '@/components/os/shell/ExampleWorkspace'
 import React from 'react';
-import { OverviewSidebar } from '@/components/os/OverviewSidebar';
-import { VaultHeader } from '@/components/os/vault/VaultHeader';
 import { VaultSubNav, VaultTab } from '@/components/os/vault/VaultSubNav';
 import { VaultWorkspacePlaceholder } from '@/components/os/vault/VaultWorkspacePlaceholder';
 import { VaultAssetsWorkspace } from '@/components/os/vault/VaultAssetsWorkspace';
@@ -24,7 +24,7 @@ const VALID_TABS: ExtendedVaultTab[] = ['assets', 'knowledge', 'folders', 'activ
 export default async function VaultPage({ searchParams }: PageProps) {
   const resolvedParams = await searchParams;
   const rawTab = typeof resolvedParams.tab === 'string' ? resolvedParams.tab : 'assets';
-  
+
   const activeTab: ExtendedVaultTab = VALID_TABS.includes(rawTab as ExtendedVaultTab)
     ? (rawTab as ExtendedVaultTab)
     : 'assets';
@@ -35,14 +35,11 @@ export default async function VaultPage({ searchParams }: PageProps) {
     folders: vaultFoldersRegistry.length,
   };
 
-  return (
-    <div className="flex h-screen w-screen bg-[var(--background)] text-[var(--foreground)] overflow-hidden font-sans">
-      <OverviewSidebar />
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {/* Pass activeTab as VaultTab fallback to satisfy VaultSubNav prop type */}
-        <VaultHeader />
-        <VaultSubNav activeTab={activeTab as VaultTab} counts={counts} />
-        <main className="flex-1 flex flex-col min-h-0 overflow-auto">
+  return <div className="os-module-page">
+    <PageHeader title="Library" description="Find saved files and information, with supporting details when you need them." />
+    <VaultSubNav activeTab={activeTab as VaultTab} counts={counts} />
+    {(activeTab === 'folders' || activeTab === 'activity') && <p className="os-notice">This view is not available yet. Use Files, Saved information or Search to explore the existing Library examples.</p>}
+    <ExampleWorkspace purpose="Use the tabs to explore the existing file and information views. Detailed records remain available below.">
           {activeTab === 'assets' && (
             <VaultAssetsWorkspace
               assets={vaultItemsRegistry}
@@ -72,8 +69,7 @@ export default async function VaultPage({ searchParams }: PageProps) {
           {activeTab === 'activity' && (
             <VaultWorkspacePlaceholder tab="activity" />
           )}
-        </main>
-      </div>
-    </div>
-  );
+
+    </ExampleWorkspace>
+  </div>
 }

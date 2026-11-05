@@ -16,7 +16,10 @@ export const osNavigation: { label: string; items: OSNavigationItem[] }[] = [
 ]
 
 export function isOSNavigationActive(href: string, pathname: string, hash = '') {
+  pathname = pathname.split(/[?#]/)[0].replace(/\/+$/, '') || '/'
   const [path, anchor] = href.split('#')
   if (anchor) return path === pathname && hash === '#' + anchor
-  return path.split('?')[0] === pathname && !(pathname === '/app' && hash === '#website-audits')
+  const base = path.split('?')[0]
+  const matches = base === '/app' ? pathname === base : pathname === base || pathname.startsWith(base + '/')
+  return matches && !(pathname === '/app' && hash === '#website-audits')
 }

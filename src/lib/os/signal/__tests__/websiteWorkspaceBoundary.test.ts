@@ -1,4 +1,4 @@
-jest.mock('next/navigation', () => ({ useRouter: jest.fn() }))
+jest.mock('next/navigation', () => ({ useRouter: jest.fn(), usePathname: () => '/app' }))
 jest.mock('@/actions/signal/submitWebsiteAnalysis', () => ({ submitWebsiteAnalysis: jest.fn() }))
 jest.mock('@/actions/signal/getLatestWebsiteScanStatus', () => ({ getLatestWebsiteScanStatus: jest.fn() }))
 jest.mock('@/actions/signal/getWebsiteScanStatus', () => ({ getWebsiteScanStatus: jest.fn() }))

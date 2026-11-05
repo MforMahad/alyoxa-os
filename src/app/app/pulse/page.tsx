@@ -1,5 +1,6 @@
+import { PageHeader } from '@/components/os/shell/PageHeader'
+import { ExampleWorkspace } from '@/components/os/shell/ExampleWorkspace'
 
-import { PulseHeader } from '@/components/os/pulse/PulseHeader';
 import { PulseSubNav } from '@/components/os/pulse/PulseSubNav';
 import { PulseRequestsWorkspace } from '@/components/os/pulse/PulseRequestsWorkspace';
 import { PulseThreadsWorkspace } from '@/components/os/pulse/PulseThreadsWorkspace';
@@ -14,7 +15,6 @@ import {
 } from '@/data/os/pulse';
 
 import { forgeTasksRegistry } from '@/data/os/forge';
-import { OverviewSidebar } from '@/components/os/OverviewSidebar';
 import { aiDecisionsRegistry } from '@/data/os/ai/aiDecisions';
 
 interface PulsePageProps {
@@ -41,14 +41,10 @@ export default async function PulsePage({ searchParams }: PulsePageProps) {
     activity: pulseActivitiesRegistry.length,
   };
 
-  return (
-    <div className="flex min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <OverviewSidebar />
-
-      <main className="flex flex-1 flex-col overflow-y-auto">
-        <PulseHeader />
-        <PulseSubNav activeTab={activeTab} counts={counts} />
-
+  return <div className="os-module-page">
+    <PageHeader title="Requests &amp; Approvals" description="Review requests, conversations and decisions that need attention." />
+    <PulseSubNav activeTab={activeTab} counts={counts} />
+    <ExampleWorkspace purpose="Use the tabs to explore the existing request and collaboration views. Detailed records remain available below.">
         {activeTab === 'requests' && (
           <PulseRequestsWorkspace
             requests={pulseRequestsRegistry}
@@ -79,7 +75,7 @@ export default async function PulsePage({ searchParams }: PulsePageProps) {
             requests={pulseRequestsRegistry}
           />
         )}
-      </main>
-    </div>
-  );
+
+    </ExampleWorkspace>
+  </div>
 }

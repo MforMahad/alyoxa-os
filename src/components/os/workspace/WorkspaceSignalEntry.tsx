@@ -44,7 +44,7 @@ function WorkspaceScanModes() {
   const [auditsEnabled, setAuditsEnabled] = useState(false);
   const [mode, setMode] = useState("quick");
   const hash = useLocationHash();
-  const selectedMode = auditsEnabled && hash === "#website-audits" ? "full" : mode;
+  const selectedMode = auditsEnabled && hash === "#website-audits" ? "full" : hash === "#website-checks" ? "quick" : mode;
   useEffect(() => {
     let cancelled = false;
     void getWebsiteAuditCapabilities().then(value => { if (!cancelled) setAuditsEnabled(value.enabled); }).catch(() => {});
@@ -52,7 +52,7 @@ function WorkspaceScanModes() {
   }, []);
   // Reset domain-keyed state and in-flight requests at the workspace boundary.
   return <>
-    {auditsEnabled && <label className="block font-mono text-xs mb-3">What would you like to check? <select aria-label="Website scan mode" value={selectedMode} onChange={e => { setMode(e.target.value); if (hash === "#website-audits" && e.target.value === "quick") window.location.hash = 'website-checks'; }} className="border p-2 bg-[var(--background)]"><option value="quick">Quick Scan · Homepage only</option><option value="full">Full Website Audit · Multiple pages</option></select></label>}
+    {auditsEnabled && <label className="block font-mono text-xs mb-3">What would you like to check? <select aria-label="Website scan mode" value={selectedMode} onChange={e => { setMode(e.target.value); window.history.replaceState(null, '', window.location.pathname + window.location.search + (e.target.value === 'full' ? '#website-audits' : '#website-checks')); window.dispatchEvent(new HashChangeEvent('hashchange')); }} className="border p-2 bg-[var(--background)]"><option value="quick">Quick Scan · Homepage only</option><option value="full">Full Website Audit · Multiple pages</option></select></label>}
     {auditsEnabled && selectedMode === "full" ? <WebsiteAuditPanel key={workspace?.id ?? "no-workspace"} /> : <WorkspaceSignalEntryContent key={workspace?.id ?? "no-workspace"} />}
   </>;
 }
@@ -455,7 +455,7 @@ function WorkspaceSignalEntryContent() {
   }
 
   function openAiAnalysis() {
-    router.push("/app/ai");
+    router.push(currentScan?.id ? "/app/ai?result=" + encodeURIComponent("scan:" + currentScan.id) : "/app/ai");
   }
 
   const scanStage =
@@ -503,7 +503,7 @@ function WorkspaceSignalEntryContent() {
             </span>
           </div>
           <h2 className="mt-6 max-w-lg font-mono text-2xl font-bold leading-[1] tracking-[-0.04em] uppercase sm:text-3xl">
-            See your website with fresh eyes.
+            Check your homepage
           </h2>
           <p className="mt-5 max-w-lg font-mono text-xs leading-6 text-[var(--muted)]">
             Add your website to check its homepage and get evidence-based suggestions.
