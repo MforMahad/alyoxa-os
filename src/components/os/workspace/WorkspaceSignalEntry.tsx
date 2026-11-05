@@ -32,6 +32,7 @@ import {
 import { useWorkspace } from "./WorkspaceProvider";
 import { getWebsiteAuditCapabilities } from "@/actions/signal/getWebsiteAuditStatus";
 import WebsiteAuditPanel from "./WebsiteAuditPanel";
+import { useLocationHash } from "../shell/useLocationHash";
 
 export default function WorkspaceSignalEntry() {
   const { workspace } = useWorkspace();
@@ -42,6 +43,8 @@ function WorkspaceScanModes() {
   const { workspace } = useWorkspace();
   const [auditsEnabled, setAuditsEnabled] = useState(false);
   const [mode, setMode] = useState("quick");
+  const hash = useLocationHash();
+  const selectedMode = auditsEnabled && hash === "#website-audits" ? "full" : mode;
   useEffect(() => {
     let cancelled = false;
     void getWebsiteAuditCapabilities().then(value => { if (!cancelled) setAuditsEnabled(value.enabled); }).catch(() => {});
@@ -49,8 +52,8 @@ function WorkspaceScanModes() {
   }, []);
   // Reset domain-keyed state and in-flight requests at the workspace boundary.
   return <>
-    {auditsEnabled && <label className="block font-mono text-xs mb-3">Scan mode <select aria-label="Website scan mode" value={mode} onChange={e => setMode(e.target.value)} className="border p-2 bg-[var(--background)]"><option value="quick">Quick Scan</option><option value="full">Full Website Audit</option></select></label>}
-    {auditsEnabled && mode === "full" ? <WebsiteAuditPanel key={workspace?.id ?? "no-workspace"} /> : <WorkspaceSignalEntryContent key={workspace?.id ?? "no-workspace"} />}
+    {auditsEnabled && <label className="block font-mono text-xs mb-3">What would you like to check? <select aria-label="Website scan mode" value={selectedMode} onChange={e => { setMode(e.target.value); if (hash === "#website-audits" && e.target.value === "quick") window.location.hash = 'website-checks'; }} className="border p-2 bg-[var(--background)]"><option value="quick">Quick Scan · Homepage only</option><option value="full">Full Website Audit · Multiple pages</option></select></label>}
+    {auditsEnabled && selectedMode === "full" ? <WebsiteAuditPanel key={workspace?.id ?? "no-workspace"} /> : <WorkspaceSignalEntryContent key={workspace?.id ?? "no-workspace"} />}
   </>;
 }
 
@@ -457,33 +460,33 @@ function WorkspaceSignalEntryContent() {
 
   const scanStage =
     signalStatus === "queued"
-      ? { title: "ANALYSIS QUEUED", detail: "Waiting for Signal processor..." }
+      ? { title: "Waiting to start", detail: "Your website check is in the queue." }
       : signalStatus === "processing"
       ? {
-          title: "ANALYZING WEBSITE",
-          detail: "Signal is examining the source...",
+          title: "Checking your website",
+          detail: "We’re collecting measurements from the homepage.",
         }
       : signalStatus === "completed"
-      ? { title: "ANALYSIS COMPLETE", detail: "" }
+      ? { title: "Your results are ready", detail: "" }
       : signalStatus === "failed"
-      ? { title: "ANALYSIS FAILED", detail: currentScan?.errorMessage ?? "" }
+      ? { title: "This check needs attention", detail: currentScan?.errorMessage ?? "" }
       : signalStatus === "unavailable"
-      ? { title: "STATUS UNAVAILABLE", detail: currentScan?.errorMessage ?? "" }
+      ? { title: "Check status unavailable", detail: currentScan?.errorMessage ?? "" }
       : null;
 
   const actionLabel = saving
-    ? "STARTING ANALYSIS..."
+    ? "Starting check…"
     : signalStatus === "queued"
-    ? "ANALYSIS QUEUED..."
+    ? "Waiting to start…"
     : signalStatus === "processing"
-    ? "ANALYZING..."
+    ? "Checking website…"
     : canViewAi
-    ? "VIEW AI ANALYSIS ↗"
+    ? "View results"
     : signalStatus === "failed"
-    ? "TRY AGAIN ↗"
+    ? "Try again"
     : websiteWasEdited || !hasSavedWebsite
-    ? "ANALYZE WEBSITE ↗"
-    : "UPDATE ↗";
+    ? "Check website"
+    : "Update website";
 
   if (!workspace) return null;
 
@@ -493,20 +496,18 @@ function WorkspaceSignalEntryContent() {
         <div className="border-b border-[var(--border)] p-6 lg:border-b-0 lg:border-r lg:p-8">
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] font-bold tracking-[0.18em] text-[var(--primary)] uppercase">
-              Signal / 01
+              Website check
             </span>
             <span className="font-mono text-[9px] tracking-[0.12em] text-[var(--muted)] uppercase">
-              Primary source
+              Homepage insights
             </span>
           </div>
           <h2 className="mt-6 max-w-lg font-mono text-2xl font-bold leading-[1] tracking-[-0.04em] uppercase sm:text-3xl">
-            Give ALYOXA something to understand.
+            See your website with fresh eyes.
           </h2>
           <p className="mt-5 max-w-lg font-mono text-xs leading-6 text-[var(--muted)]">
-            Connect the website that represents this workspace. It becomes
-            Signal&apos;s first external source of context.
-            {' '}Current database support scans the website origin only, on standard HTTP/HTTPS ports.
-            Owners and administrators can submit. Path-specific snapshots require a reviewed database change.
+            Add your website to check its homepage and get evidence-based suggestions.
+            Owners and administrators can start checks. This quick scan checks the homepage, even if you enter a longer URL.
           </p>
           <div className="mt-8 border-t border-[var(--border)] pt-4">
             <div className="font-mono text-[9px] tracking-[0.14em] text-[var(--muted)] uppercase">
@@ -642,7 +643,7 @@ function WorkspaceSignalEntryContent() {
                 disabled={saving || !websiteUrl.trim()}
                 className="mt-3 border border-[var(--border)] px-5 py-2 font-mono text-[9px] font-bold tracking-[0.12em] text-[var(--muted)] uppercase transition-colors hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                ANALYZE AGAIN
+                Check again
               </button>
             ) : null}
           </form>
@@ -650,7 +651,7 @@ function WorkspaceSignalEntryContent() {
           <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="border border-[var(--border)] p-4">
               <div className="font-mono text-[9px] tracking-[0.12em] text-[var(--muted)] uppercase">
-                Source
+                Website
               </div>
               <div className="mt-2 truncate font-mono text-xs font-bold uppercase">
                 {websiteLabel}
@@ -658,7 +659,7 @@ function WorkspaceSignalEntryContent() {
             </div>
             <div className="border border-[var(--border)] p-4">
               <div className="font-mono text-[9px] tracking-[0.12em] text-[var(--muted)] uppercase">
-                Signal status
+                Check status
               </div>
               <div className="mt-2 flex items-center gap-2 font-mono text-xs font-bold uppercase">
                 <span
