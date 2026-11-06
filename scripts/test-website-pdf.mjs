@@ -8,7 +8,7 @@ import { renderToBuffer } from '@react-pdf/renderer'
 const root=process.cwd(), cache=path.join(root,'node_modules/.cache');await mkdir(cache,{recursive:true})
 const temp=await mkdtemp(path.join(cache,'alyoxa-pdf-'))
 try {
- for(const file of ['websiteIssues.ts','websiteResultGroups.ts','reporting/data.ts','reporting/templates.tsx']) {
+ for(const file of ['websiteIssues.ts','websiteResultGroups.ts','reporting/data.ts','reporting/pagination.ts','reporting/templates.tsx']) {
   const source=await readFile(path.join(root,'src/lib/os/signal',file),'utf8')
   let output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText
   output=output.replace(/from '(\.[^']+)'/g,(_,s)=>`from '${s}.js'`)
@@ -25,13 +25,15 @@ try {
  const worstPdf=await renderToBuffer(QuickScanPdf({report:worst}))
  const quick=await renderToBuffer(QuickScanPdf({report:buildReport(run)}))
  const pageCount=b=>(b.toString('latin1').match(/\/Type \/Page\b/g)||[]).length
- assert.ok(pageCount(worstPdf)<=3,`Maximum findings Quick pages: ${pageCount(worstPdf)}`)
+ // Complete dense evidence takes precedence over the former three-page presentation cap.
+ assert.ok(pageCount(worstPdf)>=pageCount(quick),'Dense evidence must not disappear to meet a page cap')
+ assert.ok(pageCount(worstPdf)>=2)
  assert.match(quick.toString('latin1'),/^%PDF/);assert.ok(pageCount(quick)>=2&&pageCount(quick)<=3,`Quick pages: ${pageCount(quick)}`)
  assert.match(quick.toString('latin1'),/https:\/\/example.org/);assert.match(quick.toString('latin1'),/FontFile/)
  for(const count of [1,12,50]) {
   const full=await renderToBuffer(FullAuditPdf({report:buildReport({...run,kind:'audit',pageLimit:count,pages:Array.from({length:count},(_,i)=>page(i))})}))
-  assert.ok(pageCount(full)>=6,`Full pages: ${pageCount(full)}`)
+  assert.ok(pageCount(full)>=2,`Full pages: ${pageCount(full)}`)
   console.log(`Full Audit ${count} URL(s): ${pageCount(full)} pages, PDF/fonts/links PASS`)
  }
- console.log(`Quick Scan: ${pageCount(quick)} pages; Unicode fixture rendered with embedded local font; PASS`)
+ console.log(`Quick Scan: ${pageCount(quick)} pages; maximum-findings fixture: ${pageCount(worstPdf)} pages; Unicode fixture rendered with embedded local font; PASS`)
 } finally {await rm(temp,{recursive:true,force:true})}

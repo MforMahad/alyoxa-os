@@ -8,15 +8,19 @@ The loader pages run records and batches exact linked observations, independent 
 
 The typed builder reuses websiteIssues.ts versioned deterministic findings and fixes. Severity is review priority, not a score. Saved evidence-linked AI suggestions remain unverified, never regenerated. Navigation-only coverage is partial; missing measurements and failed/skipped pages are not clean results. Quick Scan origin-only historical limitations remain explicit.
 
-Quick Scan has three concise sections (overview, compact fixes, evidence), with at most three explicitly labeled AI excerpts. Full Audit has executive summary, coverage, action plan, URL-level findings, resource checks, optional saved suggestions and expanding technical appendices. Pagination grows with actual content. Pathological long retained content can require additional pages; evidence is not silently dropped to meet a page target.
+Quick Scan and Full Audit retain distinct single-URL versus navigation-limited coverage language. Both use font-measured text blocks, bounded multi-line table fragments and content-based page packing; table introductions stay with their first rows and small final tails are rebalanced. Only the branded cover forces a page break. Full Audit groups the same rule/fix across affected URLs rather than repeating the fix per URL. Complete original URLs remain clickable and are printed in retained page evidence; finding references can use concise page labels.
+
+Every retained measurement, additional measurement field, supporting reference, saved recommendation/caveat and resource provenance is preserved. Quick Scan no longer limits AI output to three excerpts. Typical concise scans remain short, but dense or long saved evidence can exceed three pages rather than being clipped or silently omitted. Raw page-level limitations are explicitly separated from aggregate audit coverage.
 
 Rendering uses @react-pdf/renderer and existing local Satoshi fonts. next.config.ts explicitly includes these fonts in serverless output tracing. Latin Unicode typography is supported; unsupported glyphs are shown as explicit [U+...] codes, not silently omitted or translated. Broader script typography requires a separately reviewed licensed font. Links allow HTTP(S) only and reject embedded credentials. Reports contain private workspace evidence: share downloaded files carefully.
 
 Offline verification:
 - npx jest --runInBand
 - node scripts/test-website-pdf.mjs
+- node scripts/test-website-pdf-pagination.mjs
+- python scripts/verify-website-pdf-pagination.py (optional local PyMuPDF required)
 - npx tsc --noEmit --incremental false
 - npm run lint
 - npm run build
 
-The renderer check uses synthetic historical evidence, embeds local fonts, validates safe link annotations and exercises one/max-six Quick findings plus 1/12/50-URL Full Audits. It creates and removes only temporary compiled files in node_modules/.cache. It does not access Supabase or call external services. Runtime/browser download behavior, actual Supabase RLS access and deployed function packaging still need controlled verification. No database migration or monitoring activation is required.
+The renderer checks use synthetic historical evidence only. The pagination matrix covers 1/5/12/30/50 candidate URLs, sparse/dense measurements, long URLs and unbroken values, complete saved-AI fixtures, redirects, failed/skipped pages and structured values. It writes fixture PDFs and a complete-evidence manifest under preview-output/pdf-pagination. The independent optional Python audit extracts actual PDF text, checks every expected measurement/record/recommendation, checks full clickable URLs and page numbers, verifies A4/text bounds, and rasterizes representative boundaries. Font/layout tests do not establish browser download behavior, deployed packaging or actual Supabase RLS access. No database migration or monitoring activation is required.
