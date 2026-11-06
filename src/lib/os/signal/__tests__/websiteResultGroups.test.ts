@@ -1,3 +1,4 @@
+jest.mock('@/components/os/ai/WebsiteResults.module.css', () => ({ __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) }))
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { PersistedSignalFeedSource, PersistedSignalObservation } from '@/data/os/signal'
@@ -28,17 +29,20 @@ it('keeps source identity across redirects and separates repeat scan/audit histo
   expect(groups[1].runs[0].observations.map(o => o.id)).toEqual(['OTHER_WEBSITE'])
 })
 
-it('renders only the selected history entry and keeps nested details/JSON collapsed', () => {
+it('renders only the selected history summary without technical payloads or accordions', () => {
   const run = groupWebsiteResults(observations, sources)[0].runs[0]
   const html = renderToStaticMarkup(createElement(SelectedWebsiteResult, { run, scans: [] }))
-  expect(html).toContain('AUDIT_SUMMARY')
-  expect(html).toContain('A_PAGE_EVIDENCE')
+  expect(html).toContain('Full Website Audit')
+  expect(html).not.toContain('AUDIT_SUMMARY')
+  expect(html).not.toContain('A_PAGE_EVIDENCE')
   expect(html).not.toContain('OTHER_WEBSITE')
   expect(html).not.toContain('OLD_SCAN')
   expect(html).not.toContain('NEW_SCAN')
-  expect(html).toContain('Page-level details (1 loaded)')
+  expect(html).not.toContain('Page-level details')
+  expect(html).toContain('Download PDF Report')
   expect(html).toContain('of 2 analyzed pages reported by the summary')
-  expect(html).toContain('Context Frame Payload')
+  expect(html).not.toContain('Context Frame Payload')
+  expect(html).toContain('Status unavailable')
   expect(html).not.toMatch(/<details\b[^>]*\bopen(?:[\s=>])/)
 })
 
@@ -55,7 +59,9 @@ it('defaults to the latest website result without expanding other histories', ()
     createElement(AIWebsiteResults, { workspaceId: 'workspace-current', observations, sources, scans: [], activeTab: 'context' })))
   expect(html).toContain('Website results')
   expect(html).toContain('Scan or audit history')
-  expect(html).toContain('A_PAGE_EVIDENCE')
+  expect(html).not.toContain('A_PAGE_EVIDENCE')
+  expect(html).toContain('Full Website Audit')
+  expect(html).toContain('1 loaded page observation(s) of 2 analyzed pages')
   expect(html).not.toContain('OTHER_WEBSITE')
   expect(html).not.toMatch(/<details\b[^>]*\bopen(?:[\s=>])/)
 })

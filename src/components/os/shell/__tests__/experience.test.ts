@@ -1,3 +1,4 @@
+jest.mock('@/components/os/ai/WebsiteResults.module.css', () => ({ __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) }))
 let mockQuery = ''
 jest.mock('next/navigation', () => ({ usePathname: () => '/app', useSearchParams: () => new URLSearchParams(mockQuery), useRouter: () => ({ refresh: jest.fn() }) }))
 jest.mock('next/link', () => ({ __esModule: true, default: (props: React.AnchorHTMLAttributes<HTMLAnchorElement> & { scroll?: boolean }) => { const { children, ...anchor } = props; delete anchor.scroll; return createElement('a', anchor, children) } }))
@@ -40,14 +41,16 @@ it('shows only the requested website and saved check, not the default website ev
   mockQuery = 'website=source-b&result=scan%3Ascan-b'
   const $ = report()
   expect($('select[aria-label="Website results"] option[selected]').attr('value')).toBe('source-b')
-  expect($('body').text()).toContain('Second website title evidence')
+  expect($('body').text()).toContain('https://second.example.org/')
+  expect($('body').text()).not.toContain('Second website title evidence')
   expect($('body').text()).not.toContain('https://first.example.org/')
 })
 it('resolves a completed Quick Scan link to its own website rather than the first website', () => {
   mockQuery = 'result=scan%3Ascan-b'
   const $ = report()
   expect($('select[aria-label="Website results"] option[selected]').attr('value')).toBe('source-b')
-  expect($('body').text()).toContain('Second website title evidence')
+  expect($('body').text()).toContain('https://second.example.org/')
+  expect($('body').text()).not.toContain('Second website title evidence')
   expect($('body').text()).not.toContain('https://first.example.org/')
 })
 it('does not silently substitute another website or check when a selection is unavailable', () => {
