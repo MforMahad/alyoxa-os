@@ -7,6 +7,7 @@ import { processWebsiteScan } from '../websiteScanProcessor'
 import { createServiceRoleClient } from '@/lib/supabase/serviceRole'
 import { fetchWebsiteHtml } from '../websiteFetch'
 import { recommendWebsiteImprovements } from '../websiteRecommendations'
+import { buildWebsiteIssueReport } from '../websiteIssues'
 
 const scanId = '629126b4-1bc9-4d5f-a100-d170fe534c5b'
 
@@ -46,6 +47,19 @@ beforeEach(() => {
   jest.mocked(recommendWebsiteImprovements).mockResolvedValue({ status: 'unavailable', recommendations: [], reason: 'Not configured' })
 })
 afterEach(() => jest.restoreAllMocks())
+
+it('keeps legacy Quick Scan persistence intact and derives canonical SEO findings only when reading saved evidence', async () => {
+  const h = harness()
+  jest.mocked(fetchWebsiteHtml).mockResolvedValue({ body: Buffer.from('<html><head><title>Real page</title><link rel="canonical" href="javascript:void(0)"></head><body><h1>Actual content</h1></body></html>'), finalUrl: new URL('https://arbitrary.example.org/'), statusCode: 200, contentType: 'text/html', headers: {} })
+  expect((await processWebsiteScan(scanId)).status).toBe('completed')
+  const retained = h.inserted(), saved = JSON.stringify(retained)
+  const report = buildWebsiteIssueReport([{ url: 'https://arbitrary.example.org/', status: 'completed', observation_id: 'observation-id', metadata: retained.metadata }])
+  expect(report.groups.find(g => g.ruleId === 'invalid_canonical')?.issues).toHaveLength(1)
+  expect(report.groups.find(g => g.ruleId === 'duplicate_title')?.measuredPages).toBe(0)
+  expect(h.events).toEqual(['processing', 'observation_insert', 'completed'])
+  expect(fetchWebsiteHtml).toHaveBeenCalledTimes(1)
+  expect(JSON.stringify(retained)).toBe(saved)
+})
 
 it('persists measured evidence and verified source/scan IDs before completing', async () => {
   const h = harness()

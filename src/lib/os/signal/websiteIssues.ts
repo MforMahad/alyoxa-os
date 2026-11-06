@@ -1,5 +1,8 @@
 /** Read-time interpretations only. Never fetches, writes or invokes AI. */
+import { buildSeoIssueGroups } from './websiteSeoIssues'
 export const WEBSITE_ISSUES_VERSION = 1 as const
+// Contextual SEO findings do not change the existing single-page detector.
+export const WEBSITE_ISSUE_REPORT_VERSION = 2 as const
 type Value = string | number | boolean
 export interface WebsiteIssue {
   ruleId: string
@@ -26,6 +29,7 @@ const rules = [
   { id: 'missing_viewport', title: 'Missing viewport metadata', evidence: 'viewport', severity: 'low', fix: 'Review the layout and add appropriate viewport metadata without preventing user zoom.', type: 'boolean' },
   { id: 'missing_h1', title: 'No H1 in returned HTML', evidence: 'h1', severity: 'low', fix: 'Review the heading structure and provide a descriptive main heading where appropriate.', type: 'count' },
 ] as const
+export const WEBSITE_PAGE_ISSUE_RULE_IDS: readonly string[] = rules.map(rule => rule.id)
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null
 }
@@ -93,12 +97,16 @@ export function buildWebsiteIssueReport(pages: IssuePage[], summary?: unknown) {
   const results = [...analyzed].sort(([a], [b]) => a.localeCompare(b)).map(([url, page]) => detectWebsiteIssues({
     affectedUrl: url, observationId: page.observation_id!, metadata: page.metadata,
   }))
-  const groups = rules.map(rule => {
+  const groups = [...rules.map(rule => {
     const issues = results.flatMap(result => result.issues.filter(issue => issue.ruleId === rule.id))
     const measuredPages = results.filter(result => result.measuredRules.includes(rule.id)).length
     return { ruleId: rule.id, title: rule.title, severity: rule.severity, recommendedFix: rule.fix,
       measuredPages, unknownPages: analyzed.size - measuredPages, affectedUrls: issues.map(issue => issue.affectedUrl), issues }
-  })
+  }), ...buildSeoIssueGroups([...analyzed].sort(([a], [b]) => a.localeCompare(b)).map(([url, page]) => {
+    const metadata = record(page.metadata), auditId = metadata?.audit_id
+    return { url, observationId: page.observation_id!, values: measurements(page.metadata),
+      auditId: metadata?.record_kind === 'audit_page' && typeof auditId === 'string' && auditId.length > 0 && auditId.length <= 64 ? auditId : null }
+  }))]
   // Resources are separate observations, not page defects. Shared/cache evidence
   // repeated on every page and the summary appears once per URL/status/result.
   const resources = new Map<string, { kind: string; url: string; status: string; httpStatus: number | null }>()
@@ -113,10 +121,12 @@ export function buildWebsiteIssueReport(pages: IssuePage[], summary?: unknown) {
       resources.set(JSON.stringify(result), result)
     }
   }
-  return { version: WEBSITE_ISSUES_VERSION, groups,
+  return { version: WEBSITE_ISSUE_REPORT_VERSION, groups,
     coverage: { completedPages: completed.length, analyzedPages: analyzed.size, candidatePages: pages.length,
       partial: true as const, pendingPages: pages.filter(p => ['queued', 'processing', 'discovered'].includes(p.status)).length,
       failedPages: pages.filter(p => p.status === 'failed').length, skippedPages: pages.filter(p => p.status === 'skipped').length },
     resources: [...resources.values()].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
-    limitations: ['Navigation-only coverage is partial; undiscovered pages are unknown.', 'Absent or malformed measurements are unknown, not proof of a defect.', 'Network failures and excluded pages are coverage outcomes, not website issues.'] }
+    limitations: ['Navigation-only coverage is partial; undiscovered pages are unknown.', 'Absent or malformed measurements are unknown, not proof of a defect.', 'Network failures and excluded pages are coverage outcomes, not website issues.',
+      'SEO duplicate checks compare complete retained text only within the same audit and origin; Quick Scans cannot establish uniqueness.',
+      'Only the first canonical declaration is retained. Missing/relative/capped declarations, multiple tags, unseen targets and canonical chains are not assessed.'] }
 }
