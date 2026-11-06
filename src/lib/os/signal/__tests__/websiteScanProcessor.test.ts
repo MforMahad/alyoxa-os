@@ -1,11 +1,13 @@
 jest.mock('server-only', () => ({}), { virtual: true })
 jest.mock('@/lib/supabase/serviceRole', () => ({ createServiceRoleClient: jest.fn() }))
 jest.mock('../websiteFetch', () => ({ fetchWebsiteHtml: jest.fn(), WebsiteScanError: class extends Error {} }))
+jest.mock('../audit/linkChecks', () => ({ checkQuickInternalLinks: jest.fn() }))
 jest.mock('../websiteRecommendations', () => ({ recommendWebsiteImprovements: jest.fn() }))
 
 import { processWebsiteScan } from '../websiteScanProcessor'
 import { createServiceRoleClient } from '@/lib/supabase/serviceRole'
 import { fetchWebsiteHtml } from '../websiteFetch'
+import { checkQuickInternalLinks } from '../audit/linkChecks'
 import { recommendWebsiteImprovements } from '../websiteRecommendations'
 import { buildWebsiteIssueReport } from '../websiteIssues'
 
@@ -44,6 +46,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   jest.spyOn(console, 'error').mockImplementation(() => {})
   jest.mocked(fetchWebsiteHtml).mockResolvedValue({ body: Buffer.from('<html><head><title>Real page</title></head><body><h1>Actual content</h1></body></html>'), finalUrl: new URL('https://arbitrary.example.org/'), statusCode: 200, contentType: 'text/html', headers: {} })
+  jest.mocked(checkQuickInternalLinks).mockResolvedValue({ checks: [], candidate_count: 0, checked_count: 0, discovery_truncated: false, excluded_links: 0, check_limit: 5 })
   jest.mocked(recommendWebsiteImprovements).mockResolvedValue({ status: 'unavailable', recommendations: [], reason: 'Not configured' })
 })
 afterEach(() => jest.restoreAllMocks())
@@ -68,6 +71,23 @@ it('persists measured evidence and verified source/scan IDs before completing', 
   expect(createServiceRoleClient).toHaveBeenCalledTimes(1)
   expect(h.observationSelects).toEqual(['id, public_id, source_id, website_scan_id'])
   expect(h.inserted()).toMatchObject({ source_id: 'source-id', website_scan_id: scanId, source_event_id: 'website_scan:scan_public', title: 'Real page', metadata: { version: 2, coverage: 'partial', ai: { status: 'unavailable' }, evidence: expect.arrayContaining([expect.objectContaining({ id: 'h1', value: 1 })]) } })
+})
+it('retains bounded internal-link results in the existing Quick Scan observation', async () => {
+  const h = harness()
+  const html = '<html><body><a href="/missing">Missing</a></body></html>'
+  jest.mocked(fetchWebsiteHtml).mockResolvedValue({ body: Buffer.from(html), finalUrl: new URL('https://arbitrary.example.org/'), statusCode: 200,
+    contentType: 'text/html', headers: {}, robotsBody: 'User-agent: *\nAllow: /', robotsOrigin: 'https://arbitrary.example.org' })
+  jest.mocked(checkQuickInternalLinks).mockResolvedValue({
+    checks: [{ url: 'https://arbitrary.example.org/missing', status: 'http_error', http_status: 404 }],
+    candidate_count: 1, checked_count: 1, discovery_truncated: false, excluded_links: 0, check_limit: 5,
+  })
+  expect((await processWebsiteScan(scanId)).status).toBe('completed')
+  expect(checkQuickInternalLinks).toHaveBeenCalledWith(html, 'https://arbitrary.example.org/', 'https://arbitrary.example.org',
+    'User-agent: *\nAllow: /', 'https://arbitrary.example.org')
+  expect(h.inserted().metadata).toMatchObject({
+    internal_link_checks: [{ url: 'https://arbitrary.example.org/missing', status: 'http_error', http_status: 404 }],
+    internal_link_coverage: { candidate_count: 1, checked_count: 1, check_limit: 5 },
+  })
 })
 it.each([{ insertError: true }, { missingReturnedRow: true }, { wrongSource: true }])('never completes unverified persistence: %j', async options => {
   const h = harness(options)

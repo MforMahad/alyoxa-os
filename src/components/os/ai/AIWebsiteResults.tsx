@@ -13,7 +13,7 @@ import type { AITab } from './AISubNav'
 import { groupWebsiteResults, type WebsiteResultRun } from '@/lib/os/signal/websiteResultGroups'
 import { useWorkspace } from '@/components/os/workspace/WorkspaceProvider'
 
-interface ScanHistoryItem { id: string; status: string; error_message: string | null; observationCount: number }
+interface ScanHistoryItem { id: string; status: string; error_message: string | null; entry_url?: string; normalized_domain?: string; created_at?: string; observationCount: number }
 interface Props {
   workspaceId: string | null
   observations: PersistedSignalObservation[]
@@ -31,7 +31,9 @@ export function AIWebsiteResults(props: Props) {
   return <WebsiteResultsContent key={props.workspaceId} {...props} />
 }
 function WebsiteResultsContent({ observations, sources, scans, activeTab, workspaceId }: Props) {
-  const groups = groupWebsiteResults(observations, sources)
+  const groups = groupWebsiteResults(observations, sources, scans.filter(scan => scan.normalized_domain).map(scan => ({
+    id: scan.id, status: scan.status, created_at: scan.created_at ?? '', normalized_domain: scan.normalized_domain!,
+  })))
   const selection = useSearchParams()
   const websiteId = selection.get('website') ?? ''
   const runId = selection.get('result') ?? ''

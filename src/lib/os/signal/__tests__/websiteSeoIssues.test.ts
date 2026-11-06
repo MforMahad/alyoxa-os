@@ -1,4 +1,4 @@
-import { buildWebsiteIssueReport, detectWebsiteIssues, type IssuePage } from '../websiteIssues'
+import { buildWebsiteIssueReport, detectWebsiteIssues, WEBSITE_ISSUE_REPORT_VERSION, type IssuePage } from '../websiteIssues'
 import { analyzeWebsiteHtml } from '../websiteIntelligence'
 
 const origin = 'https://seo.example.org'
@@ -95,7 +95,7 @@ it('does not treat missing targets, failed scans, other histories, self-noindex 
 it('keeps partial coverage honest, runs deterministically and leaves observations and the six-rule detector unchanged', () => {
   const pages = [page('/a', 'Shared'), page('/b', 'Shared'), { ...page('/failed'), status: 'failed' }]
   const saved = JSON.stringify(pages), report = buildWebsiteIssueReport(pages)
-  expect(report.version).toBe(2)
+  expect(report.version).toBe(WEBSITE_ISSUE_REPORT_VERSION)
   expect(report.coverage).toMatchObject({ partial: true, analyzedPages: 2, failedPages: 1 })
   expect(report).toEqual(buildWebsiteIssueReport([...pages].reverse()))
   expect(JSON.stringify(pages)).toBe(saved)

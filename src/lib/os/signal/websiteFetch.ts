@@ -10,7 +10,17 @@ import { robotsSiteCheck, SITEMAP_MAX_BYTES, type SiteResourceCheck } from './we
 const REQUEST_TIMEOUT_MS = 8000
 const MAX_REDIRECTS = 4
 interface PinnedAddress { address: string; family: number }
-export interface FetchResponse { body: Buffer; contentType: string; finalUrl: URL; statusCode: number; headers: Record<string, string | string[] | undefined>; siteChecks?: SiteResourceCheck[] }
+export interface FetchResponse {
+  body: Buffer
+  contentType: string
+  finalUrl: URL
+  statusCode: number
+  headers: Record<string, string | string[] | undefined>
+  siteChecks?: SiteResourceCheck[]
+  robotsBody?: string
+  robotsOrigin?: string
+}
+interface RobotsFetchResult { check: SiteResourceCheck; body: string; finalUrl: string }
 export class WebsiteScanError extends Error {}
 export class WebsiteHttpError extends WebsiteScanError {
   constructor(public readonly statusCode: number, public readonly retryAfter?: string | string[]) {
@@ -28,7 +38,7 @@ export async function fetchWebsiteHtml(startUrl: URL): Promise<FetchResponse> {
     }
 
     const address = await resolvePublicAddress(currentUrl.hostname, remainingMs)
-    const robotsCheck = await checkRobots(currentUrl, deadline)
+    const robots = await checkRobots(currentUrl, deadline)
     const response = await requestPage(currentUrl, address, Math.max(1, deadline - Date.now()))
 
     if ('redirectLocation' in response) {
@@ -46,7 +56,8 @@ export async function fetchWebsiteHtml(startUrl: URL): Promise<FetchResponse> {
       continue
     }
 
-    return { ...response, finalUrl: currentUrl, siteChecks: [robotsCheck] }
+    return { ...response, finalUrl: currentUrl, siteChecks: [robots.check], robotsBody: robots.body,
+      robotsOrigin: new URL(robots.finalUrl).origin }
   }
 }
 
@@ -206,7 +217,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
     )
   })
 }
-async function checkRobots(url: URL, deadline: number): Promise<SiteResourceCheck> {
+async function checkRobots(url: URL, deadline: number): Promise<RobotsFetchResult> {
   let current = new URL('/robots.txt', url)
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
     const remaining = deadline - Date.now()
@@ -215,7 +226,10 @@ async function checkRobots(url: URL, deadline: number): Promise<SiteResourceChec
     let response
     try { response = await requestPage(current, address, Math.max(1, deadline - Date.now()), true) }
     catch (error) {
-      if (error instanceof WebsiteHttpError && [404, 410].includes(error.statusCode)) return robotsSiteCheck('', new URL('/robots.txt', url).toString(), current.toString(), error.statusCode, 'missing')
+      if (error instanceof WebsiteHttpError && [404, 410].includes(error.statusCode)) return {
+        check: robotsSiteCheck('', new URL('/robots.txt', url).toString(), current.toString(), error.statusCode, 'missing'),
+        body: '', finalUrl: current.toString(),
+      }
       throw new WebsiteScanError('Robots directives could not be verified; content was not fetched.')
     }
     if ('redirectLocation' in response) {
@@ -229,7 +243,8 @@ async function checkRobots(url: URL, deadline: number): Promise<SiteResourceChec
     const delayMs = policy.crawlDelaySeconds * 1000
     if (!Number.isFinite(delayMs) || delayMs >= deadline - Date.now()) throw new WebsiteScanError('Robots crawl delay exceeds the fetch budget; content was not fetched.')
     if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs))
-    return robotsSiteCheck(body, new URL('/robots.txt', url).toString(), current.toString(), response.statusCode)
+    return { check: robotsSiteCheck(body, new URL('/robots.txt', url).toString(), current.toString(), response.statusCode), body,
+      finalUrl: current.toString() }
   }
   throw new WebsiteScanError('Robots redirected too many times.')
 }

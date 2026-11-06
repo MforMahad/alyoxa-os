@@ -6,6 +6,7 @@ import type { AuditClaim, AuditOutcome } from './contracts'
 import { canonicalizeWebsiteUrl } from '../websiteScanUrl'
 import { retryAfterDeadline } from './backoff'
 import { robotsSiteCheck, sitemapSiteCheck, siteCheckEvidence, type SiteResourceCheck } from '../websiteSiteChecks'
+import { checkQuickInternalLinks } from './linkChecks'
 
 async function beforeDeadline<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -16,8 +17,8 @@ async function beforeDeadline<T>(operation: Promise<T>, timeoutMs: number): Prom
   } finally { if (timer) clearTimeout(timer) }
 }
 
-/** One network request per leased work item, including robots and redirects.
- * Host spacing is persisted by the finish RPC, never bypassed by an in-process loop.
+/** Full Audit keeps one network request per leased work item. Quick Scan's bounded
+ * link sample stays inside its existing host lease and never creates crawl work.
  */
 export async function fetchAuditPage(claim: AuditClaim, options: { quick?: boolean } = {}): Promise<AuditOutcome> {
   if (claim.site_resource) return fetchSitemapResource(claim)
@@ -60,13 +61,20 @@ export async function fetchAuditPage(claim: AuditClaim, options: { quick?: boole
     }
     const extracted = extractWebsitePage(html)
     const analysis = analyzeWebsiteHtml(html, url, response.headers)
-    const discovered = options.quick ? { links: [], truncated: false, excluded: 0 } : discoverAuditLinks(html, url.toString(), claim.origin)
+    const discovered = discoverAuditLinks(html, url.toString(), claim.origin)
+    const linkChecks = options.quick
+      ? await checkQuickInternalLinks(html, url.toString(), url.origin, claim.robots_body!, url.origin)
+      : null
     return { kind: 'completed', url: url.toString(), title: extracted.title, description: extracted.description || extracted.text || 'HTML fetched with limited readable content.',
-      links: discovered.links, discovery_truncated: discovered.truncated, ...responseBackoff,
+      links: options.quick ? [] : discovered.links, discovery_truncated: discovered.truncated, ...responseBackoff,
       metadata: { version: 1, fetched_url: url.toString(), coverage: 'partial', http_status: response.statusCode,
         response_bytes: response.body.length, content_type: response.contentType,
         evidence: [...analysis.evidence, ...siteCheckEvidence(claim.site_checks ?? [])], limitations: analysis.limitations, excluded_from_ai: analysis.excludedFromAI,
         ...(claim.site_checks ? { site_checks: claim.site_checks } : {}),
+        ...(options.quick && linkChecks ? { internal_link_checks: linkChecks.checks, internal_link_coverage: {
+          candidate_count: linkChecks.candidate_count, checked_count: linkChecks.checked_count,
+          check_limit: linkChecks.check_limit, discovery_truncated: linkChecks.discovery_truncated,
+        }, limitations: [...analysis.limitations, 'Quick Scan checks at most five internal HTML links; unchecked, robots-blocked and unsupported destinations remain unverified.'] } : {}),
         page_description: extracted.description, headings: extracted.headings,
         excluded_links: discovered.excluded, text_excerpt: extracted.text } }
   } catch (error) {

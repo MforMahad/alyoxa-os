@@ -116,3 +116,54 @@ it('ignores unsafe URL schemes and does not fabricate issues from summaries or r
   expect(buildWebsiteIssueReport([], { findings: { missing_titles: 10 }, site_checks: [{ kind: 'sitemap', url: 'javascript:alert(1)', status: 'missing' }] }).resources).toEqual([])
   expect(buildWebsiteIssueReport([]).groups.flatMap(g => g.issues)).toEqual([])
 })
+
+it('reports full-audit broken destinations only for retained internal HTTP failures or redirect loops', () => {
+  const source = page({ id: 'source-row' })
+  const missing = page({ id: 'missing-row', url: url + 'missing', status: 'failed', reason: 'http_404', discovered_from: 'source-row', observation_id: null, metadata: null })
+  const loop = page({ id: 'loop-row', url: url + 'loop', status: 'failed', reason: 'redirect_loop', discovered_from: 'source-row', observation_id: null, metadata: null })
+  const blocked = page({ id: 'blocked-row', url: url + 'blocked', status: 'skipped', reason: 'robots_disallow', discovered_from: 'source-row', observation_id: null, metadata: null })
+  const timeout = page({ id: 'timeout-row', url: url + 'timeout', status: 'failed', reason: 'fetch_unavailable', discovered_from: 'source-row', observation_id: null, metadata: null })
+  const report = buildWebsiteIssueReport([source, missing, loop, blocked, timeout])
+  expect(report.groups.find(item => item.ruleId === 'broken_internal_link')?.issues.map(issue => issue.affectedUrl)).toEqual([url + 'missing'])
+  expect(report.groups.find(item => item.ruleId === 'http_error_response')?.issues.map(issue => issue.affectedUrl)).not.toContain(url + 'missing')
+  expect(report.groups.find(item => item.ruleId === 'redirect_loop')?.issues.map(issue => issue.affectedUrl)).toContain(url + 'loop')
+  expect(report.groups.find(item => item.ruleId === 'broken_internal_link')?.issues[0].evidenceReferences).toEqual(expect.arrayContaining([
+    { observationId: source.observation_id, evidenceId: 'fetched_url', value: url },
+    { pageId: 'missing-row', evidenceId: 'discovered_from', value: 'source-row' },
+    { pageId: 'missing-row', evidenceId: 'reason', value: 'http_404' },
+  ]))
+  expect(report.groups.find(item => item.ruleId === 'redirect_loop')?.issues[0].evidenceReferences).toEqual(expect.arrayContaining([
+    { observationId: source.observation_id, evidenceId: 'fetched_url', value: url },
+    { pageId: 'loop-row', evidenceId: 'discovered_from', value: 'source-row' },
+    { pageId: 'loop-row', evidenceId: 'reason', value: 'redirect_loop' },
+  ]))
+  expect(report.groups.find(item => item.ruleId === 'broken_internal_link')?.issues.map(issue => issue.affectedUrl)).not.toContain(url + 'timeout')
+  expect(report.groups.find(item => item.ruleId === 'broken_internal_link')?.issues.map(issue => issue.affectedUrl)).not.toContain(url + 'blocked')
+})
+
+it('reports Quick Scan sampled HTTP failures and loops but leaves blocked and unverified checks out', () => {
+  const scan = page({ metadata: { http_status: 200, internal_link_checks: [
+    { url: url + 'missing', status: 'http_error', http_status: 404 },
+    { url: url + 'loop', status: 'redirect_loop', http_status: 302 },
+    { url: url + 'locked', status: 'blocked', http_status: 403 },
+    { url: url + 'slow', status: 'unverified', http_status: null, reason: 'timeout' },
+  ] } })
+  const report = buildWebsiteIssueReport([scan])
+  expect(report.groups.find(item => item.ruleId === 'http_error_response')?.affectedUrls).toEqual([])
+  expect(report.groups.find(item => item.ruleId === 'broken_internal_link')?.affectedUrls).toEqual([url + 'missing'])
+  expect(report.groups.find(item => item.ruleId === 'redirect_loop')?.affectedUrls).toEqual([url + 'loop'])
+  expect(report.groups.find(item => item.ruleId === 'broken_internal_link')?.issues[0].evidenceReferences).toEqual([
+    { observationId: scan.observation_id, evidenceId: 'internal_link_checks', value: 'http_error HTTP 404' },
+  ])
+})
+
+it('reports root-page HTTP errors but excludes blocked and timeout response codes', () => {
+  const failed = page({ id: 'root-page', url: url + 'missing', status: 'failed', reason: 'http_503', metadata: null })
+  const blocked = page({ id: 'locked-page', url: url + 'locked', status: 'failed', reason: 'http_403', metadata: null })
+  const timeout = page({ id: 'slow-page', url: url + 'slow', status: 'failed', reason: 'http_408', metadata: null })
+  expect(buildWebsiteIssueReport([failed, blocked, timeout]).groups.find(item => item.ruleId === 'http_error_response')?.issues).toMatchObject([
+    { affectedUrl: url + 'missing', evidenceReferences: [{ pageId: 'root-page', evidenceId: 'reason', value: 'http_503' }] },
+  ])
+  const recovered = page({ id: 'recovered', url: url + 'recovered', reason: 'http_503', metadata: { http_status: 200 } })
+  expect(buildWebsiteIssueReport([recovered]).groups.find(item => item.ruleId === 'http_error_response')?.issues).toEqual([])
+})

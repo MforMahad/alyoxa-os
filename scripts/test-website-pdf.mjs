@@ -8,7 +8,7 @@ import { renderToBuffer } from '@react-pdf/renderer'
 const root=process.cwd(), cache=path.join(root,'node_modules/.cache');await mkdir(cache,{recursive:true})
 const temp=await mkdtemp(path.join(cache,'alyoxa-pdf-'))
 try {
- for(const file of ['websiteIssues.ts','websiteResultGroups.ts','reporting/data.ts','reporting/pagination.ts','reporting/templates.tsx']) {
+ for(const file of ['websiteIssues.ts','websiteSeoIssues.ts','websiteResultGroups.ts','reporting/data.ts','reporting/pagination.ts','reporting/templates.tsx']) {
   const source=await readFile(path.join(root,'src/lib/os/signal',file),'utf8')
   let output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText
   output=output.replace(/from '(\.[^']+)'/g,(_,s)=>`from '${s}.js'`)

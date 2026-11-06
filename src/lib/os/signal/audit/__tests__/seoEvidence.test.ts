@@ -19,6 +19,6 @@ it.each([true, false])('reuses Quick=%s extraction and requires no additional ne
   expect(report.groups.find(g => g.ruleId === 'invalid_canonical')?.issues).toHaveLength(quick ? 1 : 2)
   expect(report.groups.find(g => g.ruleId === 'duplicate_title')?.issues).toHaveLength(quick ? 0 : 2)
   expect(report.groups.find(g => g.ruleId === 'duplicate_description')?.issues).toHaveLength(quick ? 0 : 2)
-  expect(requestPage).toHaveBeenCalledTimes(quick ? 1 : 2)
+  expect(requestPage).toHaveBeenCalledTimes(2)
   expect(JSON.stringify(pages)).toBe(saved)
 })

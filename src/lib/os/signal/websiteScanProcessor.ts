@@ -9,6 +9,7 @@ import { diagnosticText } from './websiteSubmissionDiagnostics'
 import { createServiceRoleClient } from '@/lib/supabase/serviceRole'
 import { sharedCrawlEnabled } from './audit/contracts'
 import { siteCheckEvidence } from './websiteSiteChecks'
+import { checkQuickInternalLinks } from './audit/linkChecks'
 
 const SCAN_ID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const OBSERVATION_CATEGORY = 'website_content'
@@ -136,7 +137,12 @@ export async function processWebsiteScan(
     }
 
     const fetched = await fetchWebsiteHtml(websiteUrl)
-    const analysis = analyzeWebsiteHtml(fetched.body.toString('utf8'), fetched.finalUrl, fetched.headers)
+    const html = fetched.body.toString('utf8')
+    const analysis = analyzeWebsiteHtml(html, fetched.finalUrl, fetched.headers)
+    const robotsOrigin = fetched.robotsOrigin === websiteUrl.origin && fetched.finalUrl.origin === websiteUrl.origin
+      ? fetched.robotsOrigin : ''
+    const linkChecks = await checkQuickInternalLinks(html, fetched.finalUrl.toString(), fetched.finalUrl.origin,
+      fetched.robotsBody ?? '', robotsOrigin)
     const ai = await recommendWebsiteImprovements(analysis.evidence, analysis.limitations, analysis.excludedFromAI)
     const extracted = extractWebsitePage(fetched.body.toString('utf8'))
     const observationPublicId = `obs_${randomUUID().replace(/-/g, '')}`
@@ -160,8 +166,13 @@ export async function processWebsiteScan(
             version: 2,
             coverage: 'partial',
             scope: 'website_origin',
-            limitations: [...analysis.limitations, 'Existing website storage targets the origin; submitted path/query is not snapshotted by the database.'],
+            limitations: [...analysis.limitations,
+              'Existing website storage targets the origin; submitted path/query is not snapshotted by the database.',
+              'Quick Scan checks at most five internal HTML links; unchecked, robots-blocked and unsupported destinations remain unverified.'],
             evidence: [...analysis.evidence, ...siteCheckEvidence(fetched.siteChecks ?? [])],
+            internal_link_checks: linkChecks.checks,
+            internal_link_coverage: { candidate_count: linkChecks.candidate_count, checked_count: linkChecks.checked_count,
+              check_limit: linkChecks.check_limit, discovery_truncated: linkChecks.discovery_truncated },
             site_checks: fetched.siteChecks ?? [],
             ai,
             fetched_url: normalizeFetchedUrl(fetched.finalUrl),

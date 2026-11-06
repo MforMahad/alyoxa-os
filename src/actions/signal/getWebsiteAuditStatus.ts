@@ -22,7 +22,7 @@ export async function getWebsiteAuditStatus(workspaceId: string, auditId?: strin
     .eq('id', id).eq('workspace_id', workspaceId).maybeSingle()
   if (error || !audit) return { success: false as const, error: 'Audit unavailable.' }
   const { data: pages, error: pageError } = await client.from('website_audit_pages')
-    .select('id,url,final_url,status,admitted,reason,observation_id').eq('audit_id', id).eq('workspace_id', workspaceId).order('url').limit(1000)
+    .select('id,url,final_url,status,admitted,reason,observation_id,discovered_from').eq('audit_id', id).eq('workspace_id', workspaceId).order('url').limit(1000)
   if (pageError) return { success: false as const, error: 'Audit page results unavailable.' }
   const ids = (pages ?? []).flatMap(p => p.observation_id ? [p.observation_id as string] : [])
   if (audit.summary_observation_id) ids.push(audit.summary_observation_id)

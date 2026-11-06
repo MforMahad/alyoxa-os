@@ -10,7 +10,7 @@ const root=process.cwd(),cache=path.join(root,'node_modules/.cache'),output=path
 await mkdir(cache,{recursive:true});await mkdir(output,{recursive:true})
 const temp=await mkdtemp(path.join(cache,'alyoxa-pagination-'))
 try {
- for(const file of ['websiteIssues.ts','websiteResultGroups.ts','reporting/data.ts','reporting/pagination.ts','reporting/templates.tsx']) {
+ for(const file of ['websiteSeoIssues.ts','websiteIssues.ts','websiteResultGroups.ts','reporting/data.ts','reporting/pagination.ts','reporting/templates.tsx']) {
   const source=await readFile(path.join(root,'src/lib/os/signal',file),'utf8')
   const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace(/from '(\.[^']+)'/g,(_,s)=>`from '${s}.js'`)
   const target=path.join(temp,file.replace(/\.tsx?$/,'.js'));await mkdir(path.dirname(target),{recursive:true});await writeFile(target,code)

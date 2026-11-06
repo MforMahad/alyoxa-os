@@ -45,7 +45,7 @@ export function WebsiteIssueSummary({ report }: { report: Report }) {
       <details><summary className="cursor-pointer">Evidence and limitations</summary>
         <ul className="space-y-2 pt-2">{group.issues.map(issue => <li key={issue.affectedUrl} className="break-words [overflow-wrap:anywhere]">
           <p>{issue.affectedUrl} · Measurement confidence: {issue.confidence}</p>
-          <p>{issue.evidenceReferences.map(ref => `${ref.evidenceId}=${String(ref.value)} (${ref.observationId})`).join('; ')}</p>
+          <p>{issue.evidenceReferences.map(ref => `${ref.evidenceId}=${String(ref.value)} (${ref.observationId ?? `page ${ref.pageId ?? 'unavailable'}`})`).join('; ')}</p>
           {issue.limitations.map(text => <p key={text}>{text}</p>)}
         </li>)}</ul>
       </details>

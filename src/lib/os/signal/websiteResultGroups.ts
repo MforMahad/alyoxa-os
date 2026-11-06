@@ -12,13 +12,19 @@ export interface WebsiteResultGroup {
   label: string
   runs: WebsiteResultRun[]
 }
+export interface UnobservedWebsiteScan {
+  id: string
+  status: string
+  created_at: string
+  normalized_domain: string
+}
 export function observationMetadata(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
 }
 function timestamp(value: string) { return Date.parse(value) || 0 }
 
 /** Presentation grouping only. Inputs come from the existing workspace-scoped actions. */
-export function groupWebsiteResults(observations: PersistedSignalObservation[], sources: PersistedSignalFeedSource[]): WebsiteResultGroup[] {
+export function groupWebsiteResults(observations: PersistedSignalObservation[], sources: PersistedSignalFeedSource[], scans: UnobservedWebsiteScan[] = []): WebsiteResultGroup[] {
   const sourceById = new Map(sources.map(s => [s.id, s]))
   const groups = new Map<string, WebsiteResultGroup>()
   for (const source of sources.filter(s => s.source_type === 'website')) {
@@ -47,6 +53,12 @@ export function groupWebsiteResults(observations: PersistedSignalObservation[], 
     run.observations.push(observation)
     if (timestamp(observation.observed_at) > timestamp(run.timestamp)) run.timestamp = observation.observed_at
     if (metadata.record_kind === 'audit_summary' || observation.category === 'website_audit_summary') run.summary = observation
+  }
+  for (const scan of scans) {
+    if (scan.status !== 'failed') continue
+    const group = [...groups.values()].find(item => item.label === scan.normalized_domain)
+    if (!group || group.runs.some(run => run.id === `scan:${scan.id}`)) continue
+    group.runs.push({ id: `scan:${scan.id}`, kind: 'scan', timestamp: scan.created_at, observations: [] })
   }
   for (const group of groups.values()) {
     group.runs.sort((a, b) => timestamp(b.timestamp) - timestamp(a.timestamp) || a.id.localeCompare(b.id))

@@ -13,6 +13,7 @@ it('paginates past 200 observations and scopes every query to the workspace',asy
 it('fails closed on truncated linked evidence',async()=>{const m=mockClient([{data:{status:'completed',start_url:'https://example.org',summary_observation_id:'missing'},error:null},{data:[],error:null},{data:[],error:null}]);await expect(loadReport(m.client,'tenant-a','audit','old')).rejects.toThrow('EVIDENCE_INCOMPLETE')})
 
 it('does not invent a historical target for a failed Quick Scan without evidence',async()=>{const m=mockClient([{data:{status:'failed',created_at:'2026-01-01',website:{entry_url:'https://changed.example.org'}},error:null},{data:[],error:null}]);const r=await loadReport(m.client,'tenant-a','scan','old');expect(r.target).toBe('URL unavailable');expect(r.issues.coverage.failedPages).toBe(1);expect(r.findings).toEqual([])})
+it('preserves a strictly verified HTTP error for a failed Quick Scan without an observation',async()=>{const m=mockClient([{data:{status:'failed',error_message:'Website returned HTTP 404.',created_at:'2026-01-01',website:{entry_url:'https://example.org/missing'}},error:null},{data:[],error:null}]);const r=await loadReport(m.client,'tenant-a','scan','old');expect(r.target).toBe('https://example.org/missing');expect(r.findings).toHaveLength(1);expect(r.findings[0]).toMatchObject({ruleId:'http_error_response',affectedUrl:'https://example.org/missing'})})
 
 it('loads all 205 linked historical observations in bounded, tenant-scoped batches',async()=>{
  const pages=Array.from({length:205},(_,i)=>({id:String(i),url:`https://example.org/${i}`,status:'completed',admitted:true,observation_id:`saved-${i}`}))
@@ -22,4 +23,5 @@ it('loads all 205 linked historical observations in bounded, tenant-scoped batch
  expect(r.pages).toHaveLength(205);expect(r.findings).toHaveLength(205);expect(r.createdAt).toBe('2025-01-01')
  expect(m.calls.filter(c=>c[0]==='in')).toHaveLength(3)
  expect(m.calls.filter(c=>c[0]==='eq'&&c[1]==='source.workspace_id')).toEqual(Array(3).fill(['eq','source.workspace_id','tenant-a']))
+ expect(m.calls).toContainEqual(['select','id,url,final_url,status,admitted,reason,observation_id,discovered_from'])
 })

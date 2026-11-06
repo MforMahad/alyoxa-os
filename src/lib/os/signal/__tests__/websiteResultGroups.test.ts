@@ -29,6 +29,16 @@ it('keeps source identity across redirects and separates repeat scan/audit histo
   expect(groups[1].runs[0].observations.map(o => o.id)).toEqual(['OTHER_WEBSITE'])
 })
 
+it('adds failed Quick Scans without saved observations to the matching site history', () => {
+  const groups = groupWebsiteResults([], sources, [
+    { id: 'scan-failed', status: 'failed', created_at: '2026-11-05T12:00:00Z', normalized_domain: 'a.example.org' },
+    { id: 'scan-pending', status: 'queued', created_at: '2026-11-05T12:01:00Z', normalized_domain: 'a.example.org' },
+  ])
+  expect(groups[0].runs).toEqual([
+    { id: 'scan:scan-failed', kind: 'scan', timestamp: '2026-11-05T12:00:00Z', observations: [] },
+  ])
+})
+
 it('renders only the selected history summary without technical payloads or accordions', () => {
   const run = groupWebsiteResults(observations, sources)[0].runs[0]
   const html = renderToStaticMarkup(createElement(SelectedWebsiteResult, { run, scans: [] }))
